@@ -18,16 +18,24 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./apps/do-an/test/jest-e2e.json"
+    "test:e2e": "jest --config ./apps/do-an/test/jest-e2e.json",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:logs": "pm2 logs",
+    "pm2:monit": "pm2 monit",
+    "deploy": "nest build && pm2 start ecosystem.config.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/microservices": "^11.1.17",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@prisma/client": "^5.22.0",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^1.0.3",
     "class-transformer": "^0.5.1",
@@ -35,6 +43,7 @@
     "ioredis": "^5.10.1",
     "passport-jwt": "^4.0.1",
     "pg": "^8.20.0",
+    "prisma": "^5.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.28"

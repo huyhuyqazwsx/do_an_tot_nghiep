@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: do_an_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - do_an_network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: do_an_rabbitmq
+    restart: unless-stopped
+    ports:
+      - '5672:5672'     # AMQP
+      - '15672:15672'   # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - do_an_network
+
+volumes:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  do_an_network:
+    driver: bridge
