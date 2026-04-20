@@ -244,7 +244,7 @@ API -> DB : SELECT tất cả class_sections của kỳ
 DB --> API : Danh sách lớp học phần
 
 API -> Redis : Pipeline batch\nSET slots:{ma_lop} = sl_max - sl_dk\nHSET section:{ma_lop} thu kip tiet_bd tiet_kt...
-note right : Batch toàn bộ lớp trong 1 pipeline
+note right : Batch toàn bộ lớp trong 1 pipeline 
 
 API -> DB : SELECT registrations ACTIVE của kỳ
 DB --> API : Danh sách đăng ký hiện tại
