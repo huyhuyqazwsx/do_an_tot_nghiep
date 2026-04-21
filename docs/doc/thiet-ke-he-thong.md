@@ -324,7 +324,7 @@ Ghi chú: Giai đoạn đầu cache toàn bộ kỳ học.
 Sau tối ưu: cache theo kíp + lazy load cho lớp chưa có trong Redis.
 ```
 
-### 4.2 Flow đăng ký tín chỉ (batch)
+### 4.2 Flow đăng ký tín chỉ (batchwa
 
 SV submit form nhiều môn 1 lần. Mỗi môn có trạng thái độc lập.
 
