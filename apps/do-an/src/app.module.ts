@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule, RedisModule, RabbitmqModule } from '@app/shared';
+import { PrismaModule, RedisModule, RabbitmqModule, MailModule } from '@app/shared';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [PrismaModule, RedisModule, RabbitmqModule],
+  imports: [PrismaModule, RedisModule, RabbitmqModule, MailModule, AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })

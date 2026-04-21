@@ -7,10 +7,188 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ============================================================
+// SINH VIÊN
+// ============================================================
+model Student {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String   @unique @map("student_id") @db.VarChar(20)
+  name        String   @db.VarChar(200)
+  email       String   @unique @db.VarChar(200)
+  password    String   @db.VarChar(255)
+  program     String   @db.VarChar(5)   // A | B | AB
+  courseYear  Int?     @map("course_year")
+  department  String?  @db.VarChar(100)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  registrations  Registration[]
+  grades         StudentGrade[]
+
+  @@map("students")
+}
+
+// ============================================================
+// MÔN HỌC
+// ============================================================
+model Course {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String  @unique @db.VarChar(20)
+  name         String  @db.VarChar(300)
+  englishName  String? @map("english_name") @db.VarChar(300)
+  credits      Int
+  khoiLuong    String? @map("khoi_luong") @db.VarChar(20)
+  department   String? @db.VarChar(100)
+  prerequisite String? @db.VarChar(20)  // mã môn tiên quyết
+  weight       Int     @default(1)
+
+  classSections  ClassSection[]
+  grades         StudentGrade[]
+
+  @@map("courses")
+}
+
+// ============================================================
+// LỚP HỌC PHẦN
+// ============================================================
+model ClassSection {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  maLop      String  @unique @map("ma_lop") @db.VarChar(20)
+  maLopKem   String? @map("ma_lop_kem") @db.VarChar(20)  // lớp LT+BT đi kèm
+  courseId   String  @map("course_id") @db.Uuid
+  semester   String  @db.VarChar(10)
+
+  // Lịch học
+  thu        Int?                      // 2–7
+  kip        String? @db.VarChar(10)   // Sáng | Chiều | Tối
+  tietBd     Int?    @map("tiet_bd")   // tiết bắt đầu
+  tietKt     Int?    @map("tiet_kt")   // tiết kết thúc
+  thoiGian   String? @map("thoi_gian") @db.VarChar(20)  // 0645-0910
+  tuan       String? @db.VarChar(50)   // 25-32,34-42
+  phong      String? @db.VarChar(50)
+
+  // Phân loại
+  loaiLop    String? @map("loai_lop") @db.VarChar(20)
+  // LT+BT | TN | ĐA | TT | ĐATN | TTTN | BT | LT | TH
+  datMo      String? @map("dat_mo") @db.VarChar(5)      // A | B | AB
+  trangThai  String? @map("trang_thai") @db.VarChar(50)
+  canTN      Boolean @default(false) @map("can_tn")
+  ghiChu     String? @map("ghi_chu")
+
+  // Slot
+  slMax      Int     @default(0) @map("sl_max")
+  slDk       Int     @default(0) @map("sl_dk")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  course         Course         @relation(fields: [courseId], references: [id])
+  registrations  Registration[]
+
+  @@index([courseId], name: "idx_class_sections_course")
+  @@index([semester], name: "idx_class_sections_semester")
+  @@index([maLop], name: "idx_class_sections_ma_lop")
+  @@map("class_sections")
+}
+
+// ============================================================
+// ĐĂNG KÝ HỌC PHẦN
+// ============================================================
+model Registration {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId      String    @map("student_id") @db.Uuid
+  classSectionId String    @map("class_section_id") @db.Uuid
+  status         String    @default("ACTIVE") @db.VarChar(20)
+  // ACTIVE | CANCELLED | PENDING
+  registeredAt   DateTime  @default(now()) @map("registered_at")
+  cancelledAt    DateTime? @map("cancelled_at")
+
+  student       Student      @relation(fields: [studentId], references: [id])
+  classSection  ClassSection @relation(fields: [classSectionId], references: [id])
+
+  @@unique([studentId, classSectionId])
+  @@index([studentId], name: "idx_registrations_student")
+  @@index([classSectionId], name: "idx_registrations_section")
+  @@index([status], name: "idx_registrations_status")
+  @@map("registrations")
+}
+
+// ============================================================
+// KẾT QUẢ HỌC TẬP
+// ============================================================
+model StudentGrade {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  courseId    String   @map("course_id") @db.Uuid
+  semester    String   @db.VarChar(10)
+  gradeLetter String   @map("grade_letter") @db.VarChar(2)
+  // A | B+ | B | C+ | C | D+ | D | F
+  gradePoint  Decimal? @map("grade_point") @db.Decimal(3, 1)  // thang 4
+  gradeNumber Decimal? @map("grade_number") @db.Decimal(4, 1) // 0–10
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  student  Student @relation(fields: [studentId], references: [id])
+  course   Course  @relation(fields: [courseId], references: [id])
+
+  @@unique([studentId, courseId, semester])
+  @@index([studentId, courseId], name: "idx_grades_student_course")
+  @@map("student_grades")
+}
+
+// ============================================================
+// PHIÊN ĐĂNG KÝ
+// ============================================================
+model RegistrationSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  semester  String   @db.VarChar(10)
+  name      String?  @db.VarChar(100)
+  openAt    DateTime @map("open_at")
+  closeAt   DateTime @map("close_at")
+  isActive  Boolean  @default(false) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  slots  RegistrationSlot[]
+
+  @@map("registration_sessions")
+}
+
+// ============================================================
+// KHUNG GIỜ ĐĂNG KÝ
+// ============================================================
+model RegistrationSlot {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId     String    @map("session_id") @db.Uuid
+  name          String?   @db.VarChar(100)
+  studentFilter Json      @map("student_filter") @db.JsonB
+  // { course_year: 2021, program: "A" } hoặc { department: "CNTT" }
+  openAt        DateTime  @map("open_at")
+  closeAt       DateTime  @map("close_at")
+  prewarmAt     DateTime  @map("prewarm_at")   // thường = open_at - 15 phút
+  isPrewarmed   Boolean   @default(false) @map("is_prewarmed")
+  prewarmedAt   DateTime? @map("prewarmed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  session  RegistrationSession @relation(fields: [sessionId], references: [id])
+
+  @@map("registration_slots")
+}
+
+// ============================================================
+// OUTBOX — GỬI EMAIL BẤT ĐỒNG BỘ
+// ============================================================
+model Outbox {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType  String    @map("event_type") @db.VarChar(50)
+  // REGISTRATION_SUCCESS | REGISTRATION_FAILED | REGISTRATION_CANCELLED
+  payload    Json      @db.JsonB
+  // { studentId, studentEmail, studentName, courseName, maLop, semester }
+  status     String    @default("PENDING") @db.VarChar(20)
+  // PENDING | SENT | FAILED
+  retryCount Int       @default(0) @map("retry_count")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  sentAt     DateTime? @map("sent_at")
+  error      String?
+
+  @@index([status], name: "idx_outbox_status")
+  @@index([createdAt], name: "idx_outbox_created")
+  @@map("outbox")
 }

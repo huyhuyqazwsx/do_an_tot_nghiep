@@ -2,3 +2,8 @@ export * from './prisma/prisma.module';
 export * from './prisma/prisma.service';
 export * from './redis/redis.module';
 export * from './rabbitmq/rabbitmq.module';
+export * from './mail/mail.module';
+export * from './mail/mail.service';
+export * from './auth/jwt.strategy';
+export * from './auth/jwt-auth.guard';
+export * from './auth/current-user.decorator';

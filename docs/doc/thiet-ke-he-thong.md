@@ -324,62 +324,90 @@ Ghi chú: Giai đoạn đầu cache toàn bộ kỳ học.
 Sau tối ưu: cache theo kíp + lazy load cho lớp chưa có trong Redis.
 ```
 
-### 4.2 Flow đăng ký tín chỉ (happy path)
+### 4.2 Flow đăng ký tín chỉ (batch)
+
+SV submit form nhiều môn 1 lần. Mỗi môn có trạng thái độc lập.
 
 ```
-Sinh viên nhập mã lớp → POST /api/registrations
+Sinh viên chọn danh sách môn → POST /api/registrations
+Body: { registrations: [{ maLop, maLopTN? }, ...] }
         │
         ▼
 [FE - trước khi gửi request]
-  Check trùng lịch local với TKB đã cache tại browser
-  ├── Trùng → báo lỗi ngay, không gửi request (UX)
-  └── Không trùng → gửi request
+  Check trùng lịch local giữa các môn trong form
+  Check trùng lịch với lịch đã có (TKB cache localStorage)
+  Check unique maHP + loaiLop trong form
+  ├── Có lỗi → báo ngay, không gửi request
+  └── OK → gửi request
         │
         ▼
 [BE - NestJS API]
-1. Verify JWT (in-memory, không DB, không Redis)
-2. Rate limit per user (Redis INCR, TTL 1s)
+1. Verify JWT (in-memory)
+2. Rate limit per user (Redis INCR TTL 1s)
 3. Check phiên đăng ký còn mở (Redis GET reg_open)
-4. Check lớp tồn tại + SV thuộc nhóm được phép (Redis SISMEMBER allowed)
-5. Check đã đăng ký chưa (Redis EXISTS registered)
-6. Check trùng lịch server-side (Redis SINTERSTORE schedule + new_slots)
-7. DECR slot (Redis atomic) → âm thì INCR lại + reject
-8. SET lock (Redis SETNX TTL 5s) → đã có lock thì reject
+
+── VALIDATE HARD (lỗi → trả 400 ngay, không ghi gì) ──
+4. Check unique maHP + loaiLop trong batch (Set lookup)
+5. Check trùng lịch giữa các môn trong batch
+6. Check trùng lịch với lịch SV (Redis SMEMBERS schedule:{uid})
+7. Check lớp TN hợp lệ nếu can_tn = true (cùng maHP, loaiLop = TN)
+8. Check SV thuộc nhóm được phép (Redis SISMEMBER allowed:{slot_id})
+
+── VALIDATE SOFT (lỗi → ghi FAILED, tiếp tục) ──
+9. Với từng môn:
+   ├── Check đã đăng ký chưa (Redis EXISTS registered:{uid}:{maLop})
+   │     → đã có → ghi FAILED "Đã đăng ký"
+   └── DECR slots:{maLop} (Redis atomic)
+         → âm → INCR lại → ghi FAILED "Hết slot"
+         → dương → ghi PENDING → đẩy queue
         │
         ▼
-Publish message → RabbitMQ
+DB: createMany registrations
+  - Môn fail HARD → không ghi
+  - Môn fail SOFT → status = FAILED
+  - Môn pass      → status = PENDING
+
         │
         ▼
-Trả về 202 Accepted + jobId (không chờ worker)
+Queue: Đẩy từng môn PENDING vào RabbitMQ
+  message: { type: "REGISTRATION", jobId, uid, maLop, maLopTN?, registrationId }
+
+        │
+        ▼
+Trả về 202 + batchId + danh sách { maLop, registrationId, status }
         │
         ▼
 [Worker - NestJS Microservice]
+Nhận message theo type = "REGISTRATION":
 BEGIN TRANSACTION
   SELECT class_section FOR UPDATE (safety net DB)
   Kiểm tra slots > 0 trong DB
   Kiểm tra tiên quyết (query student_grades)
-  INSERT registrations (LT+BT)
-  INSERT registrations (TN) nếu có lớp kèm
+  UPDATE registrations SET status = ACTIVE (LT+BT)
+  UPDATE registrations SET status = ACTIVE (TN nếu có)
   UPDATE class_sections SET sl_dk = sl_dk + 1
   INSERT outbox (REGISTRATION_SUCCESS)
 COMMIT
+  → fail → UPDATE registrations SET status = FAILED
+           INSERT outbox (REGISTRATION_FAILED)
         │
         ▼
-SET status:{jobId} = SUCCESS (Redis)
-SADD schedule:{uid} các tiết mới (Redis)
-SET registered:{uid}:{ma_lop} (Redis)
-ack message RabbitMQ
+SADD schedule:{uid} tiết mới (Redis)
+SET registered:{uid}:{maLop} (Redis)
+ack message
         │
         ▼
-[Outbox Processor - job mỗi 5 giây]
-  SELECT * FROM outbox WHERE status = PENDING
-  Gửi email thông báo qua SMTP
-  UPDATE outbox SET status = SENT
-        │
-        ▼
-[FE polling GET /api/registrations/status/:jobId]
-  Nhận SUCCESS → hiển thị kết quả
+[FE polling GET /api/registrations/batch/:batchId]
+  → trả status từng registrationId trong batch
+  → FE hiển thị: ✅ ACTIVE | ❌ FAILED | ⏳ PENDING
 ```
+
+**Các type message trong queue:**
+
+| type | Mô tả |
+|---|---|
+| `REGISTRATION` | Xử lý đăng ký 1 lớp |
+| `CANCELLATION` | Xử lý hủy đăng ký |
 
 ### 4.3 Flow validate tiên quyết (trong Worker)
 
@@ -533,10 +561,10 @@ Môn học:
   GET    /api/courses/:code/sections   → lớp của môn (kèm lớp TN)
 
 Đăng ký:
-  POST   /api/registrations            → đăng ký (vào queue)
-  GET    /api/registrations/status/:jobId → polling kết quả
-  GET    /api/registrations/me         → danh sách đã đăng ký
-  DELETE /api/registrations/:id        → hủy đăng ký
+  POST   /api/registrations               → đăng ký batch nhiều môn
+  GET    /api/registrations/batch/:batchId → polling kết quả batch
+  GET    /api/registrations/me            → danh sách đã đăng ký
+  DELETE /api/registrations/:id           → hủy 1 môn
 
 Admin:
   POST   /api/admin/sessions           → tạo phiên đăng ký
