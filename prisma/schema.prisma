@@ -37,10 +37,11 @@ model Course {
   name         String  @db.VarChar(300)
   englishName  String? @map("english_name") @db.VarChar(300)
   credits      Int
+  tuitionCredits Decimal? @map("tuition_credits") @db.Decimal(5, 1)
   courseLoad   String? @map("khoi_luong") @db.VarChar(20)
   department   String? @db.VarChar(100)
-  prerequisite String? @db.VarChar(20)  // prerequisite course code
-  weight       Int     @default(1)
+  prerequisite String? @db.Text // prerequisite course code or expression from CSV
+  weight       Decimal @default(1) @db.Decimal(3, 1)
 
   classSections  ClassSection[]
   grades         StudentGrade[]
