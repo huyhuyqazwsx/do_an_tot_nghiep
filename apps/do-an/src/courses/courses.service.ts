@@ -1,8 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@app/shared';
 import { Prisma } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
+import { CreateCourseDto } from './dto/create-course.dto';
+import { QueryCoursesDto } from './dto/query-courses.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseCsvRow } from './types/course-csv-row.type';
 import { CourseImportError } from './types/course-import-error.type';
 import { UploadedCsvFile } from './types/uploaded-csv-file.type';
@@ -22,6 +30,96 @@ interface ImportedCourseRow {
 @Injectable()
 export class CoursesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findAll(query: QueryCoursesDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+    const where = this.buildCourseWhereInput(query);
+    const orderBy = this.buildCourseOrderBy(query);
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.course.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+      }),
+      this.prisma.course.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findOne(code: string) {
+    const normalizedCode = code.trim();
+    const course = await this.prisma.course.findUnique({
+      where: { code: normalizedCode },
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Course not found: ${normalizedCode}`);
+    }
+
+    return course;
+  }
+
+  async create(createCourseDto: CreateCourseDto) {
+    const data = this.toCourseCreateInput(createCourseDto);
+
+    try {
+      return await this.prisma.course.create({ data });
+    } catch (error) {
+      this.handleCourseWriteError(error, data.code);
+    }
+  }
+
+  async update(code: string, updateCourseDto: UpdateCourseDto) {
+    const normalizedCode = code.trim();
+    await this.ensureCourseExists(normalizedCode);
+
+    const data = this.toCourseUpdateInput(updateCourseDto);
+    const targetCode = updateCourseDto.code?.trim() || normalizedCode;
+
+    try {
+      return await this.prisma.course.update({
+        where: { code: normalizedCode },
+        data,
+      });
+    } catch (error) {
+      this.handleCourseWriteError(error, targetCode);
+    }
+  }
+
+  async remove(code: string) {
+    const normalizedCode = code.trim();
+    await this.ensureCourseExists(normalizedCode);
+
+    try {
+      return await this.prisma.course.delete({
+        where: { code: normalizedCode },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          `Cannot delete course ${normalizedCode} because it is referenced by other records`,
+        );
+      }
+
+      throw error;
+    }
+  }
 
   async importCourses(file: UploadedCsvFile) {
     const text = file.buffer.toString('utf-8').replace(/^\uFEFF/, '');
@@ -105,6 +203,139 @@ export class CoursesService {
 
       throw error;
     }
+  }
+
+  private buildCourseWhereInput(
+    query: QueryCoursesDto,
+  ): Prisma.CourseWhereInput {
+    const where: Prisma.CourseWhereInput = {};
+    const q = query.q?.trim();
+    const department = query.department?.trim();
+
+    if (q) {
+      where.OR = [
+        { code: { contains: q, mode: 'insensitive' } },
+        { name: { contains: q, mode: 'insensitive' } },
+        { englishName: { contains: q, mode: 'insensitive' } },
+        { department: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    if (department) {
+      where.department = { contains: department, mode: 'insensitive' };
+    }
+
+    if (query.credits !== undefined) {
+      where.credits = query.credits;
+    } else if (
+      query.minCredits !== undefined ||
+      query.maxCredits !== undefined
+    ) {
+      where.credits = {
+        gte: query.minCredits,
+        lte: query.maxCredits,
+      };
+    }
+
+    return where;
+  }
+
+  private buildCourseOrderBy(
+    query: QueryCoursesDto,
+  ): Prisma.CourseOrderByWithRelationInput {
+    const sortBy = query.sortBy ?? 'code';
+    const sortOrder = query.sortOrder ?? 'asc';
+
+    return {
+      [sortBy]: sortOrder,
+    };
+  }
+
+  private toCourseCreateInput(
+    dto: CreateCourseDto,
+  ): Prisma.CourseUncheckedCreateInput {
+    return {
+      code: dto.code.trim(),
+      name: dto.name.trim(),
+      englishName: dto.englishName?.trim() || null,
+      credits: dto.credits,
+      tuitionCredits: dto.tuitionCredits,
+      courseLoad: dto.courseLoad?.trim() || null,
+      department: dto.department?.trim() || null,
+      prerequisite: dto.prerequisite?.trim() || null,
+      weight: dto.weight ?? 1,
+    };
+  }
+
+  private toCourseUpdateInput(
+    dto: UpdateCourseDto,
+  ): Prisma.CourseUncheckedUpdateInput {
+    const data: Prisma.CourseUncheckedUpdateInput = {};
+
+    if (dto.code !== undefined) {
+      data.code = dto.code.trim();
+    }
+
+    if (dto.name !== undefined) {
+      data.name = dto.name.trim();
+    }
+
+    if (dto.englishName !== undefined) {
+      data.englishName = dto.englishName.trim() || null;
+    }
+
+    if (dto.credits !== undefined) {
+      data.credits = dto.credits;
+    }
+
+    if (dto.tuitionCredits !== undefined) {
+      data.tuitionCredits = dto.tuitionCredits;
+    }
+
+    if (dto.courseLoad !== undefined) {
+      data.courseLoad = dto.courseLoad.trim() || null;
+    }
+
+    if (dto.department !== undefined) {
+      data.department = dto.department.trim() || null;
+    }
+
+    if (dto.prerequisite !== undefined) {
+      data.prerequisite = dto.prerequisite.trim() || null;
+    }
+
+    if (dto.weight !== undefined) {
+      data.weight = dto.weight;
+    }
+
+    return data;
+  }
+
+  private async ensureCourseExists(code: string) {
+    const existingCourse = await this.prisma.course.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+
+    if (!existingCourse) {
+      throw new NotFoundException(`Course not found: ${code}`);
+    }
+  }
+
+  private handleCourseWriteError(error: unknown, code: string) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        throw new ConflictException(`Course code already exists: ${code}`);
+      }
+
+      throw new BadRequestException({
+        message: 'Database rejected the course write',
+        code: error.code,
+        detail: error.message,
+      });
+    }
+
+    throw error;
   }
 
   private toCourseInput(

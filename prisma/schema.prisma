@@ -7,6 +7,76 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum StudentProgram {
+  A
+  B
+  AB
+}
+
+enum ClassTimeOfDay {
+  MORNING   @map("Sáng")
+  AFTERNOON @map("Chiều")
+  EVENING   @map("Tối")
+}
+
+enum ClassSectionType {
+  LT_BT   @map("LT+BT")
+  TN
+  TH
+  BT
+  LT
+  DA      @map("ĐA")
+  TT
+  DATN    @map("ĐATN")
+  TTTN
+  TTKT
+  TTKS
+  DATNKS  @map("ĐATNKS")
+}
+
+enum SectionOpenGroup {
+  A
+  B
+  AB
+}
+
+enum ClassSectionStatus {
+  ADJUSTING_REGISTRATION @map("Điều chỉnh ĐK")
+  REGISTRATION_CLOSED    @map("Kết thúc ĐK")
+  CANCELLED              @map("Huỷ lớp")
+  SCHEDULING             @map("Đang xếp TKB")
+}
+
+enum RegistrationStatus {
+  ACTIVE
+  CANCELLED
+  PENDING
+}
+
+enum GradeLetter {
+  A_PLUS @map("A+")
+  A
+  B_PLUS @map("B+")
+  B
+  C_PLUS @map("C+")
+  C
+  D_PLUS @map("D+")
+  D
+  F
+}
+
+enum OutboxEventType {
+  REGISTRATION_SUCCESS
+  REGISTRATION_FAILED
+  REGISTRATION_CANCELLED
+}
+
+enum OutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 // ============================================================
 // STUDENTS
 // ============================================================
@@ -16,7 +86,7 @@ model Student {
   name        String   @db.VarChar(200)
   email       String   @unique @db.VarChar(200)
   password    String   @db.VarChar(255)
-  program     String   @db.VarChar(5)   // A | B | AB
+  program     StudentProgram
   courseYear  Int?     @map("course_year")
   department  String?  @db.VarChar(100)
   isActive    Boolean  @default(true) @map("is_active")
@@ -54,14 +124,14 @@ model Course {
 // ============================================================
 model ClassSection {
   id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sectionCode       String  @unique @map("ma_lop") @db.VarChar(20)
+  sectionCode       String  @map("ma_lop") @db.VarChar(20)
   linkedSectionCode String? @map("ma_lop_kem") @db.VarChar(20)  // linked lecture/lab section
   courseId          String  @map("course_id") @db.Uuid
   semester          String  @db.VarChar(10)
 
   // Schedule
   dayOfWeek         Int?    @map("thu") @db.Integer // 2-7
-  timeOfDay         String? @map("kip") @db.VarChar(10) // Morning | Afternoon | Evening
+  timeOfDay         ClassTimeOfDay? @map("kip")
   startPeriod       Int?    @map("tiet_bd") // start period
   endPeriod         Int?    @map("tiet_kt") // end period
   timeRange         String? @map("thoi_gian") @db.VarChar(20) // 0645-0910
@@ -69,10 +139,10 @@ model ClassSection {
   room              String? @map("phong") @db.VarChar(50)
 
   // Classification
-  sectionType       String? @map("loai_lop") @db.VarChar(20)
+  sectionType       ClassSectionType? @map("loai_lop")
   // LT+BT | TN | DA | TT | DATN | TTTN | BT | LT | TH
-  openingGroup      String? @map("dat_mo") @db.VarChar(5) // A | B | AB
-  sectionStatus     String? @map("trang_thai") @db.VarChar(50)
+  openingGroup      SectionOpenGroup? @map("dat_mo")
+  sectionStatus     ClassSectionStatus? @map("trang_thai")
   requiresLab       Boolean @default(false) @map("can_tn")
   note              String? @map("ghi_chu")
 
@@ -88,6 +158,7 @@ model ClassSection {
   @@index([courseId], name: "idx_class_sections_course")
   @@index([semester], name: "idx_class_sections_semester")
   @@index([sectionCode], name: "idx_class_sections_ma_lop")
+  @@unique([sectionCode, timeRange, dayOfWeek], name: "class_sections_ma_lop_thoi_gian_thu_key")
   @@map("class_sections")
 }
 
@@ -98,7 +169,7 @@ model Registration {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   studentId      String    @map("student_id") @db.Uuid
   classSectionId String    @map("class_section_id") @db.Uuid
-  status         String    @default("ACTIVE") @db.VarChar(20)
+  status         RegistrationStatus @default(ACTIVE)
   // ACTIVE | CANCELLED | PENDING
   registeredAt   DateTime  @default(now()) @map("registered_at")
   cancelledAt    DateTime? @map("cancelled_at")
@@ -121,7 +192,7 @@ model StudentGrade {
   studentId   String   @map("student_id") @db.Uuid
   courseId    String   @map("course_id") @db.Uuid
   semester    String   @db.VarChar(10)
-  gradeLetter String   @map("grade_letter") @db.VarChar(2)
+  gradeLetter GradeLetter @map("grade_letter")
   // A | B+ | B | C+ | C | D+ | D | F
   gradePoint  Decimal? @map("grade_point") @db.Decimal(3, 1)  // 4.0 scale
   gradeNumber Decimal? @map("grade_number") @db.Decimal(4, 1) // 0-10 scale
@@ -178,11 +249,11 @@ model RegistrationSlot {
 // ============================================================
 model Outbox {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventType  String    @map("event_type") @db.VarChar(50)
+  eventType  OutboxEventType @map("event_type")
   // REGISTRATION_SUCCESS | REGISTRATION_FAILED | REGISTRATION_CANCELLED
   payload    Json      @db.JsonB
   // { studentId, studentEmail, studentName, courseName, sectionCode, semester }
-  status     String    @default("PENDING") @db.VarChar(20)
+  status     OutboxStatus @default(PENDING)
   // PENDING | SENT | FAILED
   retryCount Int       @default(0) @map("retry_count")
   createdAt  DateTime  @default(now()) @map("created_at")

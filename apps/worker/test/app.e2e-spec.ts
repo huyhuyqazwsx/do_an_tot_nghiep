@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { WorkerModule } from './../src/worker.module';
+import { WorkerModule } from '../src/worker.module';
 
 describe('WorkerController (e2e)', () => {
   let app: INestApplication;

@@ -1,6 +1,16 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ClassSectionsService } from './class-sections.service';
+import type { UploadedCsvFile } from './types/uploaded-csv-file.type';
 
 @ApiTags('Class Sections')
 @Controller('api/class-sections')
@@ -9,8 +19,27 @@ export class ClassSectionsController {
 
   @Post('import')
   @ApiOperation({ summary: 'Import class sections from schedule CSV file' })
-  importClassSections() {
-    return this.classSectionsService.importClassSections();
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  importClassSections(@UploadedFile() file: UploadedCsvFile) {
+    if (!file) {
+      throw new BadRequestException('CSV file is required');
+    }
+
+    if (!file.originalname.toLowerCase().endsWith('.csv')) {
+      throw new BadRequestException('Only .csv files are supported');
+    }
+
+    return this.classSectionsService.importClassSections(file);
   }
 
   @Get()
