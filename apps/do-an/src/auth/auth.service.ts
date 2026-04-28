@@ -1,11 +1,9 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma } from '@prisma/client';
 import { PrismaService, type JwtPayload, REDIS_CLIENT } from '@app/shared';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import type Redis from 'ioredis';
-import { AuthUserRow, CurrentUserRow } from './types/auth-user-row.type';
 
 @Injectable()
 export class AuthService {
@@ -15,8 +13,8 @@ export class AuthService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  async login(userId: string, password: string) {
-    const user = await this.findAuthUserByUserId(userId);
+  async login(studentCode: string, password: string) {
+    const user = await this.findAuthUserByStudentCode(studentCode);
 
     if (!user) throw new UnauthorizedException('Tài khoản không tồn tại');
     if (!user.isActive) throw new UnauthorizedException('Tài khoản bị khóa');
@@ -27,7 +25,7 @@ export class AuthService {
     const sessionId = randomUUID();
     const payload: JwtPayload = {
       sub: user.id,
-      userId: user.userId,
+      studentCode: user.studentCode,
       role: user.role,
       sessionId,
     };
@@ -44,7 +42,7 @@ export class AuthService {
       accessToken: this.jwtService.sign(payload),
       user: {
         id: user.id,
-        userId: user.userId,
+        studentCode: user.studentCode,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -70,44 +68,38 @@ export class AuthService {
     return `auth:session:${uid}`;
   }
 
-  private async findAuthUserByUserId(userId: string) {
-    const users = await this.prisma.$queryRaw<AuthUserRow[]>(Prisma.sql`
-      SELECT
-        id,
-        user_id AS "userId",
-        name,
-        email,
-        password,
-        role,
-        program,
-        course_year AS "courseYear",
-        department,
-        is_active AS "isActive"
-      FROM users
-      WHERE user_id = ${userId}
-      LIMIT 1
-    `);
-
-    return users[0] ?? null;
+  private async findAuthUserByStudentCode(studentCode: string) {
+    return this.prisma.user.findUnique({
+      where: { studentCode },
+      select: {
+        id: true,
+        studentCode: true,
+        name: true,
+        email: true,
+        password: true,
+        role: true,
+        program: true,
+        courseYear: true,
+        department: true,
+        isActive: true,
+      },
+    });
   }
 
   private async findCurrentUserById(uid: string) {
-    const users = await this.prisma.$queryRaw<CurrentUserRow[]>(Prisma.sql`
-      SELECT
-        id,
-        user_id AS "userId",
-        name,
-        email,
-        role,
-        program,
-        course_year AS "courseYear",
-        department
-      FROM users
-      WHERE id = ${uid}::uuid
-      LIMIT 1
-    `);
-
-    return users[0] ?? null;
+    return this.prisma.user.findUnique({
+      where: { id: uid },
+      select: {
+        id: true,
+        studentCode: true,
+        name: true,
+        email: true,
+        role: true,
+        program: true,
+        courseYear: true,
+        department: true,
+      },
+    });
   }
 
   private getSessionTtlSeconds() {

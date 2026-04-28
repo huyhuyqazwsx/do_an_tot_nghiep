@@ -19,7 +19,7 @@ interface ExtractJwtType {
 
 export interface JwtPayload {
   sub: string;
-  userId: string;
+  studentCode: string;
   role: UserRole;
   sessionId: string;
 }

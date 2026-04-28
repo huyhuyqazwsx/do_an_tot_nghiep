@@ -13,7 +13,7 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: 'Đăng nhập' })
   login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.userId, dto.password);
+    return this.authService.login(dto.studentCode, dto.password);
   }
 
   @Get('me')
