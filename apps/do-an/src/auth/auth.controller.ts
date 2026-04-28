@@ -13,7 +13,7 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: 'Đăng nhập' })
   login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.studentId, dto.password);
+    return this.authService.login(dto.userId, dto.password);
   }
 
   @Get('me')
@@ -22,5 +22,13 @@ export class AuthController {
   @ApiBearerAuth('access-token')
   getMe(@CurrentUser() user: JwtPayload) {
     return this.authService.getMe(user.sub);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Đăng xuất' })
+  @ApiBearerAuth('access-token')
+  logout(@CurrentUser() user: JwtPayload) {
+    return this.authService.logout(user.sub);
   }
 }

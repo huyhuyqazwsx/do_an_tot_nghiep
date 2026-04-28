@@ -1,7 +1,8 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import Redis from 'ioredis';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
+const logger = new Logger('RedisModule');
 
 @Global()
 @Module({
@@ -16,8 +17,16 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
           lazyConnect: false,
         });
 
-        client.on('connect', () => console.log('Redis connected'));
-        client.on('error', (err) => console.error('Redis error:', err));
+        client.on('connect', () => logger.log('Redis connected'));
+        client.on('ready', () => logger.log('Redis ready'));
+        client.on('reconnecting', (delay?: number) => {
+          logger.warn(`Redis reconnecting in ${delay ?? 0}ms`);
+        });
+        client.on('close', () => logger.warn('Redis connection closed'));
+        client.on('end', () => logger.error('Redis connection ended'));
+        client.on('error', (err) => {
+          logger.error(`Redis error: ${err.message}`, err.stack);
+        });
 
         return client;
       },

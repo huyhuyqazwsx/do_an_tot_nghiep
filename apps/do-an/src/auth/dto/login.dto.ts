@@ -1,10 +1,10 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
 export class LoginDto {
-  /** Mã số sinh viên (VD: 20215678) */
+  /** User ID đăng nhập (VD: mã sinh viên hoặc 999999999 cho admin) */
   @IsString()
   @IsNotEmpty()
-  studentId: string;
+  userId: string;
 
   /** Mật khẩu */
   @IsString()

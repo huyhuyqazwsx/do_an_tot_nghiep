@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
 enum StudentProgram {
   A
   B
@@ -78,15 +83,16 @@ enum OutboxStatus {
 }
 
 // ============================================================
-// STUDENTS
+// USERS
 // ============================================================
-model Student {
+model User {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId   String   @unique @map("student_id") @db.VarChar(20)
+  userId      String   @unique @map("user_id") @db.VarChar(20)
   name        String   @db.VarChar(200)
   email       String   @unique @db.VarChar(200)
   password    String   @db.VarChar(255)
-  program     StudentProgram
+  role        UserRole @default(STUDENT)
+  program     StudentProgram?
   courseYear  Int?     @map("course_year")
   department  String?  @db.VarChar(100)
   isActive    Boolean  @default(true) @map("is_active")
@@ -95,7 +101,7 @@ model Student {
   registrations  Registration[]
   grades         StudentGrade[]
 
-  @@map("students")
+  @@map("users")
 }
 
 // ============================================================
@@ -167,18 +173,18 @@ model ClassSection {
 // ============================================================
 model Registration {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId      String    @map("student_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
   classSectionId String    @map("class_section_id") @db.Uuid
   status         RegistrationStatus @default(ACTIVE)
   // ACTIVE | CANCELLED | PENDING
   registeredAt   DateTime  @default(now()) @map("registered_at")
   cancelledAt    DateTime? @map("cancelled_at")
 
-  student       Student      @relation(fields: [studentId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
   classSection  ClassSection @relation(fields: [classSectionId], references: [id])
 
-  @@unique([studentId, classSectionId])
-  @@index([studentId], name: "idx_registrations_student")
+  @@unique([userId, classSectionId])
+  @@index([userId], name: "idx_registrations_user")
   @@index([classSectionId], name: "idx_registrations_section")
   @@index([status], name: "idx_registrations_status")
   @@map("registrations")
@@ -189,7 +195,7 @@ model Registration {
 // ============================================================
 model StudentGrade {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId   String   @map("student_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
   courseId    String   @map("course_id") @db.Uuid
   semester    String   @db.VarChar(10)
   gradeLetter GradeLetter @map("grade_letter")
@@ -198,11 +204,11 @@ model StudentGrade {
   gradeNumber Decimal? @map("grade_number") @db.Decimal(4, 1) // 0-10 scale
   createdAt   DateTime @default(now()) @map("created_at")
 
-  student  Student @relation(fields: [studentId], references: [id])
-  course   Course  @relation(fields: [courseId], references: [id])
+  user    User   @relation(fields: [userId], references: [id])
+  course  Course @relation(fields: [courseId], references: [id])
 
-  @@unique([studentId, courseId, semester])
-  @@index([studentId, courseId], name: "idx_grades_student_course")
+  @@unique([userId, courseId, semester])
+  @@index([userId, courseId], name: "idx_grades_user_course")
   @@map("student_grades")
 }
 

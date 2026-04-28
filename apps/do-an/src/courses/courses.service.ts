@@ -13,19 +13,8 @@ import { QueryCoursesDto } from './dto/query-courses.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseCsvRow } from './types/course-csv-row.type';
 import { CourseImportError } from './types/course-import-error.type';
+import { ImportedCourseRow } from './types/imported-course-row.type';
 import { UploadedCsvFile } from './types/uploaded-csv-file.type';
-
-interface ImportedCourseRow {
-  code: string;
-  name: string;
-  englishName: string | null;
-  credits: number;
-  tuitionCredits: number | null;
-  courseLoad: string | null;
-  department: string | null;
-  prerequisite: string | null;
-  weight: number;
-}
 
 @Injectable()
 export class CoursesService {

@@ -7,17 +7,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-
-type ErrorDetails = Record<string, unknown> | unknown[] | undefined;
-
-interface StandardErrorResponse {
-  statusCode: number;
-  timestamp: string;
-  path: string;
-  message: string | string[];
-  error: string;
-  details?: ErrorDetails;
-}
+import {
+  ErrorDetails,
+  StandardErrorResponse,
+} from './types/standard-error-response.type';
 
 @Catch()
 export class GlobalHttpExceptionFilter implements ExceptionFilter {
