@@ -61,14 +61,40 @@ entity "class_sections" as class_sections {
   created_at : TIMESTAMP
 }
 
-entity "registrations" as registrations {
+entity "registration_batches" as reg_batches {
   * id : UUID <<PK>>
   --
-  * student_id : UUID <<FK>>
-  * class_section_id : UUID <<FK>>
-  * status : VARCHAR(20)
-  registered_at : TIMESTAMP
-  cancelled_at : TIMESTAMP
+  * user_id : UUID <<FK>>
+  * semester : VARCHAR(10)
+  * type : VARCHAR(30)      /' CREATE | CANCEL '/
+  * status : VARCHAR(30)    /' PENDING | COMPLETED '/
+  * total_items : INTEGER
+  created_at : TIMESTAMP
+  processed_at : TIMESTAMP
+}
+
+entity "registration_batches" as reg_batches {
+  * id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  * semester : VARCHAR(10)
+  * type : VARCHAR(30)
+  * status : VARCHAR(30)
+  * total_items : INTEGER
+  created_at : TIMESTAMP
+  processed_at : TIMESTAMP
+}
+
+entity "registration_batch_items" as reg_batch_items {
+  * id : UUID <<PK>>
+  --
+  * batch_id : UUID <<FK>>
+  class_section_id : UUID <<FK>>
+  * status : VARCHAR(30)     /' PENDING | SUCCESS | FAILED '/
+  failure_reason : TEXT
+  remaining_slots : INTEGER
+  created_at : TIMESTAMP
+  processed_at : TIMESTAMP
 }
 
 entity "student_grades" as student_grades {
@@ -121,12 +147,13 @@ entity "outbox" as outbox {
 }
 
 ' Relationships
-students ||--o{ registrations : "đăng ký"
-class_sections ||--o{ registrations : "được đăng ký"
 students ||--o{ student_grades : "có kết quả"
 courses ||--o{ student_grades : "thuộc môn"
 courses ||--o{ class_sections : "có lớp học phần"
 reg_sessions ||--o{ reg_slots : "có khung giờ"
+students ||--o{ reg_batches : "gửi batch"
+reg_batches ||--o{ reg_batch_items : "có items"
+reg_batch_items }o--|| class_sections : "trỏ đến"
 
 @enduml
 ```
@@ -210,18 +237,24 @@ reg_sessions ||--o{ reg_slots : "có khung giờ"
 
 ---
 
-### 2.4 Bảng `registrations` — Đăng ký học phần
+### 2.4 Bảng `registration_batches` — Batch đăng ký / hủy
+
+> Thay thế bảng `registrations`. Trạng thái đăng ký được reconstruct từ `registration_batch_items`.
 
 | Cột | Kiểu | Ràng buộc | Mô tả |
 |---|---|---|---|
 | `id` | UUID | PK | Khóa chính |
-| `student_id` | UUID | FK → students, NOT NULL | Sinh viên |
-| `class_section_id` | UUID | FK → class_sections, NOT NULL | Lớp học phần |
-| `status` | VARCHAR(20) | DEFAULT 'ACTIVE' | ACTIVE / CANCELLED / PENDING |
-| `registered_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm đăng ký |
-| `cancelled_at` | TIMESTAMP | | Thời điểm hủy |
+| `user_id` | UUID | FK → users, NOT NULL | Sinh viên gửi batch |
+| `semester` | VARCHAR(10) | NOT NULL | Học kỳ |
+| `type` | VARCHAR(30) | NOT NULL | `CREATE` \| `CANCEL` |
+| `status` | VARCHAR(30) | NOT NULL | `PENDING` \| `COMPLETED` |
+| `total_items` | INTEGER | NOT NULL | Tổng số lớp trong batch |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
+| `processed_at` | TIMESTAMP | | Thời điểm worker xử lý xong |
 
-**Ràng buộc:** `UNIQUE(student_id, class_section_id)` — mỗi SV chỉ đăng ký 1 lần cho mỗi lớp.
+**Ý nghĩa status:**
+- `PENDING` → API đã ghi nhận, đang chờ worker
+- `COMPLETED` → Worker đã xử lý xong (kết quả từng item xem qua `registration_batch_items`)
 
 ---
 
@@ -311,9 +344,15 @@ reg_sessions ||--o{ reg_slots : "có khung giờ"
 ## 4. Quan hệ giữa các bảng
 
 ```
-students ──────────────┬──── registrations ────┬──── class_sections ──── courses
-                       │                        │
-                       └──── student_grades ────┘
+users ─────────────────────┬──── registrations ─────┬──── class_sections ──── courses
+                           │                         │
+                           ├──── student_grades ─────┘
+                           │
+                           └──── registration_batches ──── registration_batch_items
+                                                                 │
+                                              ┌──────────────────┤
+                                              │                  │
+                                         registrations    class_sections
 
 registration_sessions ──── registration_slots
 
@@ -326,9 +365,39 @@ outbox (độc lập, liên kết qua payload JSONB)
 
 | Ràng buộc | Bảng | Cách thực hiện |
 |---|---|---|
-| 1 SV chỉ đăng ký 1 lần mỗi lớp | registrations | UNIQUE(student_id, class_section_id) |
-| Không vượt sĩ số tối đa | class_sections | Redis DECR + DB SELECT FOR UPDATE |
-| Môn tiên quyết phải đã qua | student_grades | Worker query trước khi INSERT |
-| Không trùng lịch | — | Redis SINTERSTORE (API) + logic (Worker) |
-| Lớp TN bắt buộc khi can_tn = true | class_sections | API validate trước khi đẩy queue |
-| Đăng ký + email là atomic | registrations + outbox | Cùng 1 DB transaction |
+| 1 SV 1 lớp chỉ 1 batch item SUCCESS dạng CREATE | registration_batch_items | Logic reconstruct: lấy latest item theo (userId, classSectionId) |
+| Không vượt sĩ số tối đa | class_sections | `UPDATE ... WHERE sl_dk < sl_max` trong transaction |
+| Môn tiên quyết phải đã qua | student_grades | Worker query trước khi UPDATE |
+| Không trùng lịch | — | In-memory check trong Worker |
+| Lớp TN bắt buộc khi requiresLab=true | class_sections | API validate trước khi đẩy queue |
+| Đăng ký + email là atomic | registration_batch_items + outbox | Cùng 1 DB transaction |
+| Không có 2 batch PENDING cùng lúc | registration_batches | API check trước khi tạo batch |
+| Cancel idempotent | registration_batch_items | Worker check latest item type trước khi xử lý |
+
+---
+
+## 6. Bảng `registration_batches` — Batch đăng ký/hủy
+
+| Cột | Kiểu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `id` | UUID | PK | Khóa chính |
+| `user_id` | UUID | FK → users | Sinh viên gửi batch |
+| `semester` | VARCHAR(10) | NOT NULL | Học kỳ |
+| `type` | VARCHAR(30) | NOT NULL | `CREATE` \| `CANCEL` |
+| `status` | VARCHAR(30) | NOT NULL | `PENDING` \| `PROCESSING` \| `COMPLETED` \| `PARTIAL_FAILED` \| `FAILED` |
+| `total_items` | INTEGER | NOT NULL | Tổng số lớp trong batch |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
+| `processed_at` | TIMESTAMP | | Thời điểm worker xử lý xong |
+
+### 2.7b Bảng `registration_batch_items` — Item trong batch
+
+| Cột | Kiểu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `id` | UUID | PK | Khóa chính |
+| `batch_id` | UUID | FK → registration_batches | Batch chứa item |
+| `class_section_id` | UUID | FK → class_sections (nullable) | Lớp học phần |
+| `status` | VARCHAR(30) | NOT NULL | `PENDING` \| `SUCCESS` \| `FAILED` |
+| `failure_reason` | TEXT | | Lý do thất bại (nếu FAILED) |
+| `remaining_slots` | INTEGER | | Slot còn lại sau khi xử lý |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
+| `processed_at` | TIMESTAMP | | Thời điểm worker xử lý item này |

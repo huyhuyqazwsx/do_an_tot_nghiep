@@ -93,64 +93,68 @@ participant "RabbitMQ" as MQ
 participant "Worker\n(NestJS)" as Worker
 database "PostgreSQL" as DB
 
-SV -> FE : Chọn lớp + nhấn Đăng ký
+SV -> FE : Chọn danh sách lớp + nhấn Đăng ký
 
-FE -> FE : Check trùng lịch local\n(dùng TKB từ localStorage)
+FE -> FE : Check trùng lịch local\n(dùng TKB từ localStorage)\nCheck không có batch PENDING
 
-alt Trùng lịch (phát hiện local)
-    FE --> SV : Báo lỗi ngay\n"Trùng lịch với lớp X"
-else Không trùng
-    FE -> API : POST /api/registrations\n{ maLop, maLopTN? }\nAuthorization: Bearer <token>
+alt Trùng lịch / có batch đang chờ
+    FE --> SV : Báo lỗi ngay, không gửi request
+else OK
+    FE -> API : POST /api/registrations/batches\n{ semester, classSectionIds: [...] }\nAuthorization: Bearer <token>
 
     API -> API : Verify JWT (in-memory)
+    API -> DB : Check batch PENDING/PROCESSING tồn tại?
+    DB --> API : Không có
 
-    API -> Redis : GET reg_open:{semester}
-    Redis --> API : Phiên đăng ký đang mở
+    API -> DB : Load & validate classSections\n(kiểm tra semester, status, requiresLab)
+    DB --> API : Sections hợp lệ
 
-    API -> Redis : SISMEMBER allowed:{slot_id} {uid}
-    Redis --> API : true (SV thuộc nhóm được phép)
+    group DB Transaction
+        API -> DB : CREATE RegistrationBatch (PENDING)
+        API -> DB : CREATE RegistrationBatchItem (PENDING) × n
+    end
 
-    API -> Redis : EXISTS registered:{uid}:{ma_lop}
-    Redis --> API : false (chưa đăng ký)
-
-    API -> Redis : SINTERSTORE schedule + new_slots
-    Redis --> API : 0 (không trùng lịch)
-
-    API -> Redis : DECR slots:{ma_lop}
-    Redis --> API : 14 (còn slot)
-
-    API -> Redis : SETNX lock:{uid}:{ma_lop} TTL 5s
-    Redis --> API : 1 (lock thành công)
-
-    API -> MQ : Publish message\n{ uid, maLop, maLopTN, jobId }
+    API -> MQ : Publish REGISTRATION_CREATE_BATCH_REQUESTED\n{ batchId, userId, semester, items[] }
     MQ --> API : ack
 
-    API --> FE : 202 Accepted { jobId }
+    API --> FE : 201 Created { batchId, status: PENDING, items[] }
     FE --> SV : "Đang xử lý..."
 
-    == Xử lý bất đồng bộ ==
+    == Xử lý bất đồng bộ (Worker) ==
 
     MQ -> Worker : Consume message
-    Worker -> DB : BEGIN TRANSACTION\nSELECT class_section FOR UPDATE
-    Worker -> DB : Kiểm tra slot > 0
-    Worker -> DB : Kiểm tra tiên quyết\n(query student_grades)
-    Worker -> DB : INSERT registrations
-    Worker -> DB : UPDATE class_sections SET sl_dk++
-    Worker -> DB : INSERT outbox (PENDING)
-    Worker -> DB : COMMIT
+    Worker -> DB : Load active registrations của user (từ RegistrationBatchItem SUCCESS+CREATE)
 
-    Worker -> Redis : SET status:{jobId} = SUCCESS
-    Worker -> Redis : SADD schedule:{uid} tiết mới
-    Worker -> Redis : SET registered:{uid}:{ma_lop}
+    loop Với từng item
+        Worker -> Worker : Validate trùng môn, trùng lịch, tiên quyết
+
+        alt Không pass validate
+            Worker -> DB : UPDATE item → FAILED (reason)
+        else Pass
+            group DB Transaction
+                Worker -> DB : UPDATE class_sections SET sl_dk+1\nWHERE sl_dk < sl_max RETURNING remaining
+                alt Hết slot
+                    Worker -> DB : ROLLBACK
+                    Worker -> DB : UPDATE item → FAILED "Hết chỗ"
+                else Còn slot
+                    Worker -> DB : INSERT outbox (REGISTRATION_SUCCESS)
+                    Worker -> DB : UPDATE item → SUCCESS + remainingSlots
+                end
+            end
+            Worker -> Redis : DEL userRegistered, userSchedule, sectionSlots, sectionInfo
+        end
+    end
+
+    Worker -> DB : UPDATE batch → COMPLETED
     Worker -> MQ : ack message
 
     == FE polling ==
 
-    FE -> API : GET /api/registrations/status/{jobId}
-    API -> Redis : GET status:{jobId}
-    Redis --> API : SUCCESS
-    API --> FE : { status: "SUCCESS" }
-    FE --> SV : "Đăng ký thành công!"
+    FE -> API : GET /api/registrations/batches/:batchId
+    API -> DB : findFirst batch WHERE userId match
+    DB --> API : batch { items[{ status, failureReason }] }
+    API --> FE : batch detail
+    FE --> SV : ✅ Thành công | ❌ Thất bại + lý do | ⏳ Đang xử lý
 end
 
 @enduml
@@ -158,68 +162,104 @@ end
 
 ---
 
-## 4. Đăng ký tín chỉ (Thất bại — hết slot)
+## 4. Đăng ký tín chỉ — Batch hủy đăng ký
 
 ```plantuml
-@startuml SD_DangKy_HetSlot
-title Sơ đồ tuần tự: Đăng ký thất bại (hết slot)
+@startuml SD_CancelBatch
+title Sơ đồ tuần tự: Hủy đăng ký (Cancel Batch)
 
 actor "Sinh viên" as SV
 participant "Frontend\n(React)" as FE
 participant "API Server\n(NestJS)" as API
+participant "RabbitMQ" as MQ
+participant "Worker\n(NestJS)" as Worker
+database "PostgreSQL" as DB
 participant "Redis" as Redis
 
-SV -> FE : Chọn lớp + nhấn Đăng ký
-FE -> API : POST /api/registrations { maLop }
+SV -> FE : Chọn các lớp cần hủy
+
+FE -> API : DELETE /api/registrations/batches\n{ classSectionIds: [...] }\nAuthorization: Bearer <token>
+
 API -> API : Verify JWT
+API -> DB : Load classSections, xác nhận cùng semester
+DB --> API : Sections hợp lệ
+API -> DB : Check RegistrationBatchItem SUCCESS+CREATE (xác nhận đang đăng ký)
+DB --> API : Đang ACTIVE
+API -> DB : Check không có cancel batch PENDING
 
-API -> Redis : DECR slots:{ma_lop}
-Redis --> API : -1 (hết slot)
+group DB Transaction
+    API -> DB : CREATE RegistrationBatch (CANCEL, PENDING)
+    API -> DB : CREATE RegistrationBatchItem (PENDING) × n
+end
 
-API -> Redis : INCR slots:{ma_lop}
-note right : Rollback DECR về 0
+API -> MQ : Publish REGISTRATION_CANCEL_BATCH_REQUESTED\n{ batchId, userId, semester }
+MQ --> API : ack
+API --> FE : 201 Created { batchId, status: PENDING }
+FE --> SV : "Đang xử lý..."
 
-API --> FE : 409 Conflict "Lớp học đã hết chỗ"
-FE --> SV : Thông báo "Lớp học đã hết chỗ"
+== Xử lý bất đồng bộ (Worker) ==
+
+MQ -> Worker : Consume message
+
+loop Với từng item
+    group DB Transaction
+        Worker -> DB : findFirst RegistrationBatchItem\nWHERE classSectionId = ? AND userId = ? AND status = SUCCESS
+        alt latest item type = CANCEL (idempotent)
+            Worker -> DB : UPDATE item → SUCCESS
+        else latest item type = CREATE
+            Worker -> DB : UPDATE class_sections SET sl_dk = GREATEST(sl_dk-1, 0)
+            Worker -> DB : INSERT outbox (REGISTRATION_CANCELLED)
+            Worker -> DB : UPDATE item → SUCCESS + remainingSlots
+        end
+    end
+    Worker -> Redis : DEL userRegistered, userSchedule, sectionSlots, sectionInfo
+end
+
+Worker -> DB : UPDATE batch → COMPLETED
+Worker -> MQ : ack message
+
+FE -> API : GET /api/registrations/batches/:batchId
+API --> FE : batch detail
+FE --> SV : Hiển thị kết quả hủy
 
 @enduml
 ```
 
 ---
 
-## 5. Hủy đăng ký
+## 5. Prewarm Redis (Cron Job)
 
 ```plantuml
-@startuml SD_HuyDangKy
-title Sơ đồ tuần tự: Hủy đăng ký
+@startuml SD_Prewarm
+title Sơ đồ tuần tự: Prewarm Redis (Worker Cron)
 
-actor "Sinh viên" as SV
-participant "Frontend\n(React)" as FE
-participant "API Server\n(NestJS)" as API
-participant "Redis" as Redis
+participant "Worker Cron\n(EVERY_MINUTE)" as Cron
+participant "PrewarmService" as PS
 database "PostgreSQL" as DB
+database "Redis" as Redis
 
-SV -> FE : Nhấn Hủy đăng ký lớp X
-FE -> API : DELETE /api/registrations/:id\nAuthorization: Bearer <token>
+Cron -> Cron : checkAndPrewarm()\nGuard isRunning
 
-API -> API : Verify JWT
+Cron -> DB : SELECT slots WHERE prewarm_at <= now()\nAND is_prewarmed = false AND session.is_active = true
+DB --> Cron : Slots cần prewarm
 
-API -> DB : SELECT registration\nWHERE id = ? AND student_id = ?
-DB --> API : Thông tin đăng ký
+alt Không có slot nào
+    Cron -> Cron : return (skip)
+else Có slot
+    loop Với từng session
+        Cron -> PS : prewarmSession(session)
 
-alt Không tìm thấy hoặc không thuộc SV này
-    API --> FE : 404 Not Found
-    FE --> SV : Thông báo lỗi
-else Phiên đăng ký đã đóng
-    API --> FE : 403 Forbidden "Ngoài thời gian hủy đăng ký"
-    FE --> SV : Thông báo lỗi
-else Hủy thành công
-    API -> DB : BEGIN TRANSACTION\nUPDATE registrations SET status = CANCELLED\nUPDATE class_sections SET sl_dk--\nCOMMIT
-    API -> Redis : INCR slots:{ma_lop}
-    API -> Redis : DEL registered:{uid}:{ma_lop}
-    API -> Redis : SREM schedule:{uid} các tiết của lớp
-    API --> FE : 200 OK
-    FE --> SV : "Hủy đăng ký thành công"
+        PS -> Redis : SET reg:session:{semester} JSON TTL=closeAt
+        PS -> DB : SELECT class_sections WHERE semester (batch 500)
+        PS -> Redis : Pipeline SET reg:section:slots:{id} = sl_max - sl_dk
+        PS -> Redis : Pipeline HSET reg:section:info:{id} {...}
+        PS -> DB : SELECT registrations ACTIVE WHERE semester (batch 1000)
+        PS -> Redis : Pipeline SADD reg:user:registered:{uid}:{semester}
+        PS -> Redis : Pipeline SADD reg:user:schedule:{uid}:{semester}
+        PS -> DB : SELECT users theo studentFilter trong slot
+        PS -> Redis : Pipeline SADD reg:slot:allowed:{slotId} TTL=slot.closeAt
+        PS -> DB : UPDATE registration_slots SET is_prewarmed=true, prewarmed_at=now()
+    end
 end
 
 @enduml

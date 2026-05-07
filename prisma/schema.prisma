@@ -12,12 +12,6 @@ enum UserRole {
   ADMIN
 }
 
-enum StudentProgram {
-  A
-  B
-  AB
-}
-
 enum ClassTimeOfDay {
   MORNING   @map("Sáng")
   AFTERNOON @map("Chiều")
@@ -25,18 +19,18 @@ enum ClassTimeOfDay {
 }
 
 enum ClassSectionType {
-  LT_BT   @map("LT+BT")
+  LT_BT  @map("LT+BT")
   TN
   TH
   BT
   LT
-  DA      @map("ĐA")
+  DA     @map("ĐA")
   TT
-  DATN    @map("ĐATN")
+  DATN   @map("ĐATN")
   TTTN
   TTKT
   TTKS
-  DATNKS  @map("ĐATNKS")
+  DATNKS @map("ĐATNKS")
 }
 
 enum SectionOpenGroup {
@@ -50,12 +44,6 @@ enum ClassSectionStatus {
   REGISTRATION_CLOSED    @map("Kết thúc ĐK")
   CANCELLED              @map("Huỷ lớp")
   SCHEDULING             @map("Đang xếp TKB")
-}
-
-enum RegistrationStatus {
-  ACTIVE
-  CANCELLED
-  PENDING
 }
 
 enum GradeLetter {
@@ -76,6 +64,22 @@ enum OutboxEventType {
   REGISTRATION_CANCELLED
 }
 
+enum RegistrationBatchType {
+  CREATE
+  CANCEL
+}
+
+enum RegistrationBatchStatus {
+  PENDING
+  COMPLETED
+}
+
+enum RegistrationBatchItemStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 enum OutboxStatus {
   PENDING
   SENT
@@ -92,14 +96,13 @@ model User {
   email       String   @unique @db.VarChar(200)
   password    String   @db.VarChar(255)
   role        UserRole @default(STUDENT)
-  program     StudentProgram?
   courseYear  Int?     @map("course_year")
   department  String?  @db.VarChar(100)
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  registrations  Registration[]
-  grades         StudentGrade[]
+  grades              StudentGrade[]
+  registrationBatches RegistrationBatch[]
 
   @@map("users")
 }
@@ -108,19 +111,19 @@ model User {
 // COURSES
 // ============================================================
 model Course {
-  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code         String  @unique @db.VarChar(20)
-  name         String  @db.VarChar(300)
-  englishName  String? @map("english_name") @db.VarChar(300)
-  credits      Int
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String   @unique @db.VarChar(20)
+  name           String   @db.VarChar(300)
+  englishName    String?  @map("english_name") @db.VarChar(300)
+  credits        Int
   tuitionCredits Decimal? @map("tuition_credits") @db.Decimal(5, 1)
-  courseLoad   String? @map("khoi_luong") @db.VarChar(20)
-  department   String? @db.VarChar(100)
-  prerequisite String? @db.Text // prerequisite course code or expression from CSV
-  weight       Decimal @default(1) @db.Decimal(3, 1)
+  courseLoad     String?  @map("khoi_luong") @db.VarChar(20)
+  department     String?  @db.VarChar(100)
+  prerequisite   String?  @db.Text // prerequisite course code or expression from CSV
+  weight         Decimal  @default(1) @db.Decimal(3, 1)
 
-  classSections  ClassSection[]
-  grades         StudentGrade[]
+  classSections ClassSection[]
+  grades        StudentGrade[]
 
   @@map("courses")
 }
@@ -131,81 +134,101 @@ model Course {
 model ClassSection {
   id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sectionCode       String  @map("ma_lop") @db.VarChar(20)
-  linkedSectionCode String? @map("ma_lop_kem") @db.VarChar(20)  // linked lecture/lab section
+  linkedSectionCode String? @map("ma_lop_kem") @db.VarChar(20) // linked lecture/lab section
   courseId          String  @map("course_id") @db.Uuid
   semester          String  @db.VarChar(10)
 
   // Schedule
-  dayOfWeek         Int?    @map("thu") @db.Integer // 2-7
-  timeOfDay         ClassTimeOfDay? @map("kip")
-  startPeriod       Int?    @map("tiet_bd") // start period
-  endPeriod         Int?    @map("tiet_kt") // end period
-  timeRange         String? @map("thoi_gian") @db.VarChar(20) // 0645-0910
-  weekRange         String? @map("tuan") @db.VarChar(50) // 25-32,34-42
-  room              String? @map("phong") @db.VarChar(50)
+  dayOfWeek   Int?            @map("thu") @db.Integer // 2-7
+  timeOfDay   ClassTimeOfDay? @map("kip")
+  startPeriod Int?            @map("tiet_bd") // start period
+  endPeriod   Int?            @map("tiet_kt") // end period
+  timeRange   String?         @map("thoi_gian") @db.VarChar(20) // 0645-0910
+  weekRange   String?         @map("tuan") @db.VarChar(50) // 25-32,34-42
+  room        String?         @map("phong") @db.VarChar(50)
 
   // Classification
-  sectionType       ClassSectionType? @map("loai_lop")
+  sectionType   ClassSectionType?   @map("loai_lop")
   // LT+BT | TN | DA | TT | DATN | TTTN | BT | LT | TH
-  openingGroup      SectionOpenGroup? @map("dat_mo")
-  sectionStatus     ClassSectionStatus? @map("trang_thai")
-  requiresLab       Boolean @default(false) @map("can_tn")
-  note              String? @map("ghi_chu")
+  openingGroup  SectionOpenGroup?   @map("dat_mo")
+  sectionStatus ClassSectionStatus? @map("trang_thai")
+  requiresLab   Boolean             @default(false) @map("can_tn")
+  note          String?             @map("ghi_chu")
 
   // Capacity
-  maxCapacity       Int     @default(0) @map("sl_max")
-  registeredCount   Int     @default(0) @map("sl_dk")
+  maxCapacity     Int @default(0) @map("sl_max")
+  registeredCount Int @default(0) @map("sl_dk")
 
-  createdAt         DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  course         Course         @relation(fields: [courseId], references: [id])
-  registrations  Registration[]
+  course     Course                  @relation(fields: [courseId], references: [id])
+  batchItems RegistrationBatchItem[]
 
+  @@unique([sectionCode, timeRange, dayOfWeek], name: "class_sections_ma_lop_thoi_gian_thu_key")
   @@index([courseId], name: "idx_class_sections_course")
   @@index([semester], name: "idx_class_sections_semester")
   @@index([sectionCode], name: "idx_class_sections_ma_lop")
-  @@unique([sectionCode, timeRange, dayOfWeek], name: "class_sections_ma_lop_thoi_gian_thu_key")
   @@map("class_sections")
 }
 
 // ============================================================
-// COURSE REGISTRATIONS
+// REGISTRATION BATCHES
 // ============================================================
-model Registration {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String    @map("user_id") @db.Uuid
-  classSectionId String    @map("class_section_id") @db.Uuid
-  status         RegistrationStatus @default(ACTIVE)
-  // ACTIVE | CANCELLED | PENDING
-  registeredAt   DateTime  @default(now()) @map("registered_at")
-  cancelledAt    DateTime? @map("cancelled_at")
+model RegistrationBatch {
+  id          String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String                  @map("user_id") @db.Uuid
+  semester    String                  @db.VarChar(10)
+  type        RegistrationBatchType
+  // CREATE | CANCEL
+  status      RegistrationBatchStatus
+  // PENDING | COMPLETED
+  totalItems  Int                     @map("total_items")
+  createdAt   DateTime                @default(now()) @map("created_at")
+  processedAt DateTime?               @map("processed_at")
 
-  user          User         @relation(fields: [userId], references: [id])
-  classSection  ClassSection @relation(fields: [classSectionId], references: [id])
+  user  User                    @relation(fields: [userId], references: [id])
+  items RegistrationBatchItem[]
 
-  @@unique([userId, classSectionId])
-  @@index([userId], name: "idx_registrations_user")
-  @@index([classSectionId], name: "idx_registrations_section")
-  @@index([status], name: "idx_registrations_status")
-  @@map("registrations")
+  @@index([userId, createdAt(sort: Desc)], name: "idx_reg_batches_user_created")
+  @@index([semester], name: "idx_reg_batches_semester")
+  @@map("registration_batches")
+}
+
+model RegistrationBatchItem {
+  id             String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchId        String                      @map("batch_id") @db.Uuid
+  classSectionId String?                     @map("class_section_id") @db.Uuid
+  status         RegistrationBatchItemStatus
+  // PENDING | SUCCESS | FAILED
+  failureReason  String?                     @map("failure_reason") @db.Text
+  remainingSlots Int?                        @map("remaining_slots")
+  createdAt      DateTime                    @default(now()) @map("created_at")
+  processedAt    DateTime?                   @map("processed_at")
+
+  batch        RegistrationBatch @relation(fields: [batchId], references: [id])
+  classSection ClassSection?     @relation(fields: [classSectionId], references: [id])
+
+  @@index([batchId], name: "idx_reg_batch_items_batch")
+  @@index([classSectionId], name: "idx_reg_batch_items_class_section")
+  @@map("registration_batch_items")
 }
 
 // ============================================================
 // STUDENT GRADES
 // ============================================================
 model StudentGrade {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  courseId    String   @map("course_id") @db.Uuid
-  semester    String   @db.VarChar(10)
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  courseId    String      @map("course_id") @db.Uuid
+  semester    String      @db.VarChar(10)
   gradeLetter GradeLetter @map("grade_letter")
   // A | B+ | B | C+ | C | D+ | D | F
-  gradePoint  Decimal? @map("grade_point") @db.Decimal(3, 1)  // 4.0 scale
-  gradeNumber Decimal? @map("grade_number") @db.Decimal(4, 1) // 0-10 scale
-  createdAt   DateTime @default(now()) @map("created_at")
+  gradePoint  Decimal?    @map("grade_point") @db.Decimal(3, 1) // 4.0 scale
+  gradeNumber Decimal?    @map("grade_number") @db.Decimal(4, 1) // 0-10 scale
+  createdAt   DateTime    @default(now()) @map("created_at")
 
-  user    User   @relation(fields: [userId], references: [id])
-  course  Course @relation(fields: [courseId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
 
   @@unique([userId, courseId, semester])
   @@index([userId, courseId], name: "idx_grades_user_course")
@@ -224,8 +247,9 @@ model RegistrationSession {
   isActive  Boolean  @default(false) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
 
-  slots  RegistrationSlot[]
+  slots RegistrationSlot[]
 
+  @@unique([semester], name: "registration_sessions_semester_key")
   @@map("registration_sessions")
 }
 
@@ -237,15 +261,15 @@ model RegistrationSlot {
   sessionId     String    @map("session_id") @db.Uuid
   name          String?   @db.VarChar(100)
   studentFilter Json      @map("student_filter") @db.JsonB
-  // { course_year: 2021, program: "A" } or { department: "CNTT" }
+  // { course_year: 2021 } or { department: "CNTT" }
   openAt        DateTime  @map("open_at")
   closeAt       DateTime  @map("close_at")
-  prewarmAt     DateTime  @map("prewarm_at")   // usually = open_at - 15 minutes
+  prewarmAt     DateTime  @map("prewarm_at") // usually = open_at - 15 minutes
   isPrewarmed   Boolean   @default(false) @map("is_prewarmed")
   prewarmedAt   DateTime? @map("prewarmed_at")
   createdAt     DateTime  @default(now()) @map("created_at")
 
-  session  RegistrationSession @relation(fields: [sessionId], references: [id])
+  session RegistrationSession @relation(fields: [sessionId], references: [id])
 
   @@map("registration_slots")
 }
@@ -254,16 +278,16 @@ model RegistrationSlot {
 // OUTBOX - ASYNC EMAIL DELIVERY
 // ============================================================
 model Outbox {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   eventType  OutboxEventType @map("event_type")
   // REGISTRATION_SUCCESS | REGISTRATION_FAILED | REGISTRATION_CANCELLED
-  payload    Json      @db.JsonB
+  payload    Json            @db.JsonB
   // { studentId, studentEmail, studentName, courseName, sectionCode, semester }
-  status     OutboxStatus @default(PENDING)
+  status     OutboxStatus    @default(PENDING)
   // PENDING | SENT | FAILED
-  retryCount Int       @default(0) @map("retry_count")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  sentAt     DateTime? @map("sent_at")
+  retryCount Int             @default(0) @map("retry_count")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  sentAt     DateTime?       @map("sent_at")
   error      String?
 
   @@index([status], name: "idx_outbox_status")

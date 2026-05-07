@@ -7,10 +7,13 @@ import {
   RabbitmqModule,
   MailModule,
 } from '@app/shared';
-import { AuthModule } from './auth/auth.module';
-import { CoursesModule } from './courses/courses.module';
-import { ClassSectionsModule } from './class-sections/class-sections.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CoursesModule } from './modules/courses/courses.module';
+import { ClassSectionsModule } from './modules/class-sections/class-sections.module';
 import { ApiLoggerMiddleware } from './common/middlewares/api-logger.middleware';
+import { UsersModule } from './modules/users/users.module';
+import { RegistrationsModule } from './modules/registrations/registrations.module';
+import { RegistrationSessionsModule } from './modules/registration-sessions/registration-sessions.module';
 
 @Module({
   imports: [
@@ -19,8 +22,11 @@ import { ApiLoggerMiddleware } from './common/middlewares/api-logger.middleware'
     RabbitmqModule,
     MailModule,
     AuthModule,
+    UsersModule,
     CoursesModule,
     ClassSectionsModule,
+    RegistrationSessionsModule,
+    RegistrationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

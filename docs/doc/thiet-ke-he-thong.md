@@ -147,19 +147,37 @@ CREATE TABLE class_sections (
 - Nhiều môn có cả lớp `LT+BT` lẫn `TN` — sinh viên cần đăng ký cả 2
 - `ma_lop_kem` liên kết lớp TN với lớp LT+BT tương ứng
 
-### 2.4 Bảng registrations
+### 2.4 Bảng registration_batches
 ```sql
-CREATE TABLE registrations (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id        UUID REFERENCES students(id),
-  class_section_id  UUID REFERENCES class_sections(id),
-  status            VARCHAR(20) DEFAULT 'ACTIVE',
-  -- ACTIVE | CANCELLED | PENDING
-  registered_at     TIMESTAMP DEFAULT NOW(),
-  cancelled_at      TIMESTAMP,
-  UNIQUE (student_id, class_section_id)
+CREATE TABLE registration_batches (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID REFERENCES users(id),
+  semester      VARCHAR(10) NOT NULL,
+  type          VARCHAR(30) NOT NULL,   -- CREATE | CANCEL
+  status        VARCHAR(30) NOT NULL,   -- PENDING | COMPLETED
+  total_items   INTEGER NOT NULL,
+  created_at    TIMESTAMP DEFAULT NOW(),
+  processed_at  TIMESTAMP
 );
 ```
+
+**Ghi chú:** `PENDING` = hệ thống đã ghi nhận, `COMPLETED` = worker đã xử lý xong. Không dùng PARTIAL_FAILED/FAILED ở batch level — xem kết quả từng lớp qua `registration_batch_items`.
+
+### 2.4b Bảng registration_batch_items
+```sql
+CREATE TABLE registration_batch_items (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  batch_id         UUID REFERENCES registration_batches(id),
+  class_section_id UUID REFERENCES class_sections(id),
+  status           VARCHAR(30) NOT NULL,  -- PENDING | SUCCESS | FAILED
+  failure_reason   TEXT,
+  remaining_slots  INTEGER,
+  created_at       TIMESTAMP DEFAULT NOW(),
+  processed_at     TIMESTAMP
+);
+```
+
+**Ghi chú:** Không có bảng `registrations` riêng. Trạng thái đăng ký được reconstruct từ `registration_batch_items` — lấy `SUCCESS` item mới nhất theo `(user, classSectionId)`, nếu batch type là `CREATE` → đang đăng ký, `CANCEL` → đã hủy.
 
 ### 2.5 Bảng student_grades
 ```sql
@@ -232,15 +250,16 @@ CREATE TABLE registration_slots (
 
 ### 2.9 Indexes
 ```sql
-CREATE INDEX idx_class_sections_course    ON class_sections(course_id);
-CREATE INDEX idx_class_sections_semester  ON class_sections(semester);
-CREATE INDEX idx_class_sections_ma_lop    ON class_sections(ma_lop);
-CREATE INDEX idx_registrations_student    ON registrations(student_id);
-CREATE INDEX idx_registrations_section    ON registrations(class_section_id);
-CREATE INDEX idx_registrations_status     ON registrations(status);
-CREATE INDEX idx_grades_student_course    ON student_grades(student_id, course_id);
-CREATE INDEX idx_outbox_status            ON outbox(status);
-CREATE INDEX idx_outbox_created           ON outbox(created_at);
+CREATE INDEX idx_class_sections_course      ON class_sections(course_id);
+CREATE INDEX idx_class_sections_semester    ON class_sections(semester);
+CREATE INDEX idx_class_sections_ma_lop      ON class_sections(ma_lop);
+CREATE INDEX idx_reg_batches_user_created   ON registration_batches(user_id, created_at DESC);
+CREATE INDEX idx_reg_batches_semester       ON registration_batches(semester);
+CREATE INDEX idx_reg_batch_items_batch      ON registration_batch_items(batch_id);
+CREATE INDEX idx_reg_batch_items_section    ON registration_batch_items(class_section_id);
+CREATE INDEX idx_grades_student_course      ON student_grades(student_id, course_id);
+CREATE INDEX idx_outbox_status              ON outbox(status);
+CREATE INDEX idx_outbox_created             ON outbox(created_at);
 ```
 
 ---
@@ -326,88 +345,109 @@ Sau tối ưu: cache theo kíp + lazy load cho lớp chưa có trong Redis.
 
 ### 4.2 Flow đăng ký tín chỉ (batch)
 
-SV submit form nhiều môn 1 lần. Mỗi môn có trạng thái độc lập.
+SV submit form nhiều môn 1 lần qua batch. Mỗi item có trạng thái độc lập.
 
 ```
-Sinh viên chọn danh sách môn → POST /api/registrations
-Body: { registrations: [{ maLop, maLopTN? }, ...] }
+Sinh viên chọn danh sách lớp → POST /api/registrations/batches
+Body: { semester, classSectionIds: [uuid, uuid, ...] }  (1–10 lớp)
         │
         ▼
 [FE - trước khi gửi request]
   Check trùng lịch local giữa các môn trong form
   Check trùng lịch với lịch đã có (TKB cache localStorage)
-  Check unique maHP + loaiLop trong form
+  Nếu đang có batch PENDING → chặn, không gửi
   ├── Có lỗi → báo ngay, không gửi request
   └── OK → gửi request
         │
         ▼
-[BE - NestJS API]
+[BE - NestJS API — RegistrationsService]
 1. Verify JWT (in-memory)
-2. Rate limit per user (Redis INCR TTL 1s)
-3. Check phiên đăng ký còn mở (Redis GET reg_open)
+2. Check không có batch PENDING cho kỳ này (409 nếu có)
+3. Load và validate classSections từ DB:
+   ├── Tất cả phải tồn tại trong semester được chỉ định
+   ├── Không có lớp CANCELLED / REGISTRATION_CLOSED
+   └── Nếu lớp LT+BT có requiresLab=true → batch phải có lớp TN cùng môn
+        │
+        ▼
+Transaction:
+  CREATE RegistrationBatch (PENDING)
+  CREATE RegistrationBatchItem (PENDING) cho từng lớp
+        │
+        ▼
+Publish REGISTRATION_CREATE_BATCH_REQUESTED:
+  { type, batchId, userId, semester, items[] }  ← embed sectionInfo tránh Worker query lại
+        │
+        ▼
+Trả về 201 + batch { id, status: PENDING, items[] }
+        │
+        ▼
+[Worker — RegistrationConsumerService → CreateBatchHandler]
+Load items từ payload (không query DB lại nếu có)
+Load trạng thái đăng ký hiện tại của user từ RegistrationBatchItem (SUCCESS, type=CREATE)
 
-── VALIDATE HARD (lỗi → trả 400 ngay, không ghi gì) ──
-4. Check unique maHP + loaiLop trong batch (Set lookup)
-5. Check trùng lịch giữa các môn trong batch
-6. Check trùng lịch với lịch SV (Redis SMEMBERS schedule:{uid})
-7. Check lớp TN hợp lệ nếu can_tn = true (cùng maHP, loaiLop = TN)
-8. Check SV thuộc nhóm được phép (Redis SISMEMBER allowed:{slot_id})
+Với từng item (validate in-memory):
+  ├── Trùng môn với đã đăng ký           → item FAILED
+  ├── Trùng môn với item khác trong batch → item FAILED
+  ├── Trùng lịch                          → item FAILED
+  ├── Chưa qua tiên quyết                → item FAILED
+  └── Pass → Transaction:
+        UPDATE class_sections SET sl_dk+1 WHERE sl_dk < sl_max RETURNING remaining
+        → hết slot → item FAILED
+        → còn slot → INSERT outbox (REGISTRATION_SUCCESS)
+                     item SUCCESS + remainingSlots
 
-── VALIDATE SOFT (lỗi → ghi FAILED, tiếp tục) ──
-9. Với từng môn:
-   ├── Check đã đăng ký chưa (Redis EXISTS registered:{uid}:{maLop})
-   │     → đã có → ghi FAILED "Đã đăng ký"
-   └── DECR slots:{maLop} (Redis atomic)
-         → âm → INCR lại → ghi FAILED "Hết slot"
-         → dương → ghi PENDING → đẩy queue
+Update RegistrationBatch → COMPLETED  (kể cả khi có item FAILED)
+DEL Redis: userRegistered, userSchedule, sectionSlots, sectionInfo
+ACK message
         │
         ▼
-DB: createMany registrations
-  - Môn fail HARD → không ghi
-  - Môn fail SOFT → status = FAILED
-  - Môn pass      → status = PENDING
-
-        │
-        ▼
-Queue: Đẩy từng môn PENDING vào RabbitMQ
-  message: { type: "REGISTRATION", jobId, uid, maLop, maLopTN?, registrationId }
-
-        │
-        ▼
-Trả về 202 + batchId + danh sách { maLop, registrationId, status }
-        │
-        ▼
-[Worker - NestJS Microservice]
-Nhận message theo type = "REGISTRATION":
-BEGIN TRANSACTION
-  SELECT class_section FOR UPDATE (safety net DB)
-  Kiểm tra slots > 0 trong DB
-  Kiểm tra tiên quyết (query student_grades)
-  UPDATE registrations SET status = ACTIVE (LT+BT)
-  UPDATE registrations SET status = ACTIVE (TN nếu có)
-  UPDATE class_sections SET sl_dk = sl_dk + 1
-  INSERT outbox (REGISTRATION_SUCCESS)
-COMMIT
-  → fail → UPDATE registrations SET status = FAILED
-           INSERT outbox (REGISTRATION_FAILED)
-        │
-        ▼
-SADD schedule:{uid} tiết mới (Redis)
-SET registered:{uid}:{maLop} (Redis)
-ack message
-        │
-        ▼
-[FE polling GET /api/registrations/batch/:batchId]
-  → trả status từng registrationId trong batch
-  → FE hiển thị: ✅ ACTIVE | ❌ FAILED | ⏳ PENDING
+[FE polling GET /api/registrations/batches/:batchId]
+  → trả status từng item
+  → FE hiển thị: ✅ SUCCESS | ❌ FAILED + lý do | ⏳ PENDING
 ```
 
-**Các type message trong queue:**
+**Lưu ý về durability:**
+- Queue `durable: true`, message `persistent: true`, RabbitMQ có volume mount → message không mất khi restart
+- Worker crash (TCP drop) → RabbitMQ tự requeue message chưa ack
+- Worker khởi động lại → consume lại → **idempotent**: load items WHERE status=PENDING, item đã SUCCESS bỏ qua
+- Unhandled exception trong handler → `nack(false, false)` → message **không** requeue, vào DLQ (nếu cấu hình) hoặc drop
 
-| type | Mô tả |
+### 4.2b Flow hủy đăng ký (cancel batch)
+
+```
+Sinh viên chọn các lớp cần hủy → DELETE /api/registrations/batches
+Body: { classSectionIds: [uuid, uuid, ...] }  (1–10)
+        │
+        ▼
+[BE - NestJS API]
+1. Verify JWT
+2. Load classSections từ DB, xác nhận tất cả cùng semester
+3. Kiểm tra classSections có đăng ký ACTIVE của user (qua RegistrationBatchItem SUCCESS+CREATE)
+4. Kiểm tra không có cancel batch PENDING cho kỳ này
+5. Tạo RegistrationBatch (CANCEL, PENDING) + items
+6. Publish REGISTRATION_CANCEL_BATCH_REQUESTED
+7. Trả về 201 + batch PENDING
+        │
+        ▼
+[Worker — CancelBatchHandler]
+Với từng item — kiểm tra trạng thái qua RegistrationBatchItem:
+  latest SUCCESS item type = CANCEL → item SUCCESS (idempotent, đã hủy rồi)
+  latest SUCCESS item type = CREATE → Transaction:
+    UPDATE class_sections SET sl_dk = GREATEST(sl_dk-1, 0)
+    INSERT outbox (REGISTRATION_CANCELLED)
+    item SUCCESS + remainingSlots
+
+Update batch → COMPLETED
+DEL Redis: userRegistered, userSchedule, sectionSlots, sectionInfo
+ACK message
+```
+
+**Events trong queue:**
+
+| Event | Mô tả |
 |---|---|
-| `REGISTRATION` | Xử lý đăng ký 1 lớp |
-| `CANCELLATION` | Xử lý hủy đăng ký |
+| `REGISTRATION_CREATE_BATCH_REQUESTED` | Xử lý batch đăng ký |
+| `REGISTRATION_CANCEL_BATCH_REQUESTED` | Xử lý batch hủy đăng ký |
 
 ### 4.3 Flow validate tiên quyết (trong Worker)
 
@@ -515,14 +555,17 @@ Mỗi request:
 | Validate | FE | BE (API) | BE (Worker) |
 |---|---|---|---|
 | JWT | | Bắt buộc (in-memory) | |
-| Rate limit | | Redis | |
-| Phiên đăng ký mở | | Redis | |
-| Nhóm được phép | | Redis Set | |
-| Đã đăng ký chưa | | Redis | |
-| Trùng lịch | Local (UX) | Redis (bắt buộc) | |
-| Slot còn không | Hiển thị (UX) | Redis DECR | DB FOR UPDATE |
+| Phiên đăng ký mở | | DB query | |
+| Không có batch PENDING | | DB query | |
+| classSections hợp lệ | | DB query | |
+| requiresLab (TN kèm LT+BT) | | DB query | |
+| Trùng môn | Local (UX) | | In-memory (Worker) |
+| Trùng lịch | Local (UX) | | In-memory (Worker) |
+| Slot còn không | Hiển thị (UX) | | DB FOR UPDATE |
 | Tiên quyết | | | DB query |
 | Toàn vẹn dữ liệu | | | DB transaction |
+
+**Ghi chú:** Redis dùng để **đọc** (prewarm TKB cho FE, cache section info/slots để FE hiển thị) — không dùng validate trong luồng API. DB là nguồn sự thật duy nhất.
 
 ---
 
@@ -530,12 +573,12 @@ Mỗi request:
 
 ```
 Worker transaction (atomic):
-  INSERT registrations     ─┐
-  UPDATE class_sections sl  ├── Cùng 1 transaction
-  INSERT outbox (PENDING)  ─┘
+  UPDATE class_sections sl_dk+1  ─┐
+  UPDATE batch_item → SUCCESS     ├── Cùng 1 transaction
+  INSERT outbox (PENDING)        ─┘
 
-Outbox Processor (job độc lập):
-  Poll outbox WHERE status = PENDING
+Outbox Processor (job độc lập, mỗi 5 giây):
+  Poll outbox WHERE status = PENDING LIMIT 10
   Gửi email
   UPDATE status = SENT / FAILED
   Retry tối đa 3 lần nếu FAILED
@@ -551,25 +594,39 @@ Outbox Processor (job độc lập):
 Auth:
   POST   /api/auth/login
   GET    /api/auth/me
+  POST   /api/auth/logout
 
 TKB:
-  GET    /api/tkb/:semester            → Toàn bộ TKB kỳ học dạng key-value object (gzip ~65KB)
-  GET    /api/tkb/:semester/version    → { version: "v2" } — FE check trước khi download
+  GET    /api/tkb/:semester            → Toàn bộ TKB kỳ học (gzip ~65KB)
+  GET    /api/tkb/:semester/version    → { version } — FE check trước khi download
 
 Môn học:
   GET    /api/courses                  → danh sách môn
-  GET    /api/courses/:code/sections   → lớp của môn (kèm lớp TN)
+  GET    /api/courses/:code            → chi tiết môn
 
-Đăng ký:
-  POST   /api/registrations               → đăng ký batch nhiều môn
-  GET    /api/registrations/batch/:batchId → polling kết quả batch
-  GET    /api/registrations/me            → danh sách đã đăng ký
-  DELETE /api/registrations/:id           → hủy 1 môn
+Lớp học phần:
+  GET    /api/class-sections           → danh sách lớp
+  POST   /api/class-sections/import    → import CSV TKB
+
+Đăng ký (Student):
+  GET    /api/registrations/my?semester=          → danh sách đăng ký của SV (reconstruct từ batch items)
+  POST   /api/registrations/batches               → tạo batch đăng ký, body: { semester, classSectionIds[] }
+  DELETE /api/registrations/batches               → tạo batch hủy đăng ký, body: { classSectionIds[] }
+  GET    /api/registrations/batches/:batchId      → polling kết quả batch
 
 Admin:
-  POST   /api/admin/sessions           → tạo phiên đăng ký
-  POST   /api/admin/sessions/:id/activate → mở đăng ký + trigger pre-warm
-  POST   /api/admin/tkb/sync           → force sync TKB + tăng ETag version
+  GET    /api/registrations?semester=&studentCode= → đọc đăng ký của SV
+  POST   /api/admin/sessions                       → tạo phiên đăng ký + slots
+  POST   /api/admin/sessions/:id/activate          → mở đăng ký (cron sẽ auto prewarm Redis)
+  POST   /api/admin/tkb/sync                       → force sync TKB version
+
+Users (Admin):
+  GET    /api/users
+  POST   /api/users
+  POST   /api/users/import
+  GET    /api/users/:studentCode
+  PATCH  /api/users/:studentCode
+  DELETE /api/users/:studentCode
 ```
 
 ---
@@ -632,25 +689,45 @@ export default function () {
 
 ```
 apps/
-  api/src/
+  do-an/src/             ← API app
     auth/
+    users/
+    courses/
+    class-sections/
+    registrations/
+      dto/
+        create-registration-batch.dto.ts
+        cancel-registration-batch.dto.ts
+      registrations.controller.ts
+      registrations.service.ts      ← create/cancel batch, read
+      registrations.module.ts
+    common/
+
+  worker/src/             ← Worker app
     registration/
-    tkb/
-    admin/
-    redis/
-  worker/src/
-    registration/        ← @MessagePattern handler
-    outbox/              ← email processor
+      registration-helper.service.ts   ← slot lock, schedule check, prereq
+      create-batch.handler.ts          ← xử lý CREATE_BATCH_REQUESTED
+      cancel-batch.handler.ts          ← xử lý CANCEL_BATCH_REQUESTED
+      registration-consumer.service.ts ← consume RabbitMQ, dispatch handler
+      registration-worker.module.ts
+    prewarm/
+      registration-prewarm.service.ts  ← logic prewarm Redis
+      registration-prewarm.cron.ts     ← @Cron mỗi phút check slot cần prewarm
+      prewarm.module.ts
+    worker.module.ts
+
 libs/
   shared/src/
-    entities/            ← TypeORM/Prisma entities
-    dto/
-    constants/           ← queue names, redis keys
-scripts/
-  seed-students.ts       ← tạo 1000 SV test
-  load-test.js           ← k6 script
-docker/
-  docker-compose.yml     ← PostgreSQL + Redis + RabbitMQ
+    prisma/                  ← PrismaService
+    redis/
+      redis.module.ts
+      registration-redis-key.ts  ← key constants
+    rabbitmq/
+      rabbitmq-publisher.service.ts
+      types/
+        registration-queue.types.ts  ← RegistrationQueueEvent + payload
+    auth/                    ← JWT strategy, guards, decorators
+    mail/
 ```
 
 ---

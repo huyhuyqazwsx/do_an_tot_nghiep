@@ -14,5 +14,12 @@ module.exports = {
       exec_mode: 'fork',
       watch: false,
     },
+    {
+      name: 'do-an-scheduler',
+      script: './dist/apps/scheduler/main.js',
+      instances: 1,       // ← PHẢI là 1, tránh duplicate cron
+      exec_mode: 'fork',
+      watch: false,
+    },
   ],
 };
