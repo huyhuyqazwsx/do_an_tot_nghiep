@@ -10,11 +10,7 @@ import { RegistrationWorkerModule } from './registration/registration-worker.mod
  * Cron jobs được tách sang SchedulerModule (apps/scheduler).
  */
 @Module({
-  imports: [
-    PrismaModule,
-    RedisModule,
-    RegistrationWorkerModule,
-  ],
+  imports: [PrismaModule, RedisModule, RegistrationWorkerModule],
   controllers: [WorkerController],
   providers: [WorkerService],
 })

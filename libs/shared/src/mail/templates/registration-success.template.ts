@@ -23,7 +23,9 @@ const infoRow = (label: string, value: string) => `
   </tr>
 `;
 
-export const registrationSuccessTemplate = (data: RegistrationSuccessData): string => {
+export const registrationSuccessTemplate = (
+  data: RegistrationSuccessData,
+): string => {
   const content = `
     <!-- Status badge -->
     <div style="display:inline-flex;align-items:center;gap:8px;

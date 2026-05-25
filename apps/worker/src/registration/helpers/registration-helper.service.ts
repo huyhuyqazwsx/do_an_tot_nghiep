@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/shared';
-import { RegistrationBatchItemStatus } from '@prisma/client';
+import { Prisma, RegistrationBatchItemStatus } from '@prisma/client';
+import type { ScheduleInfo } from '../types/registration-worker.types';
+
+type SlotMutationResult = {
+  remaining: number;
+  registeredCount: number;
+};
 
 @Injectable()
 export class RegistrationHelperService {
@@ -13,39 +19,49 @@ export class RegistrationHelperService {
    * Throws nếu hết chỗ.
    */
   async acquireSlot(
-    tx: PrismaService,
+    tx: Prisma.TransactionClient,
     classSectionId: string,
-  ): Promise<number> {
-    const updated = await tx.$queryRaw<Array<{ remaining: number }>>`
+  ): Promise<SlotMutationResult> {
+    const updated = await tx.$queryRaw<
+      Array<{ remaining: number; registered_count: number }>
+    >`
       UPDATE class_sections
       SET sl_dk = sl_dk + 1
       WHERE id = ${classSectionId}::uuid
         AND sl_dk < sl_max
-      RETURNING (sl_max - sl_dk) AS remaining
+      RETURNING (sl_max - sl_dk) AS remaining, sl_dk AS registered_count
     `;
 
     if (updated.length === 0) {
       throw new Error('Lớp học đã hết chỗ');
     }
 
-    return updated[0].remaining;
+    return {
+      remaining: updated[0].remaining,
+      registeredCount: updated[0].registered_count,
+    };
   }
 
   /**
    * Giảm sl_dk (không xuống dưới 0), trả về remaining slots.
    */
   async releaseSlot(
-    tx: PrismaService,
+    tx: Prisma.TransactionClient,
     classSectionId: string,
-  ): Promise<number> {
-    const updated = await tx.$queryRaw<Array<{ remaining: number }>>`
+  ): Promise<SlotMutationResult> {
+    const updated = await tx.$queryRaw<
+      Array<{ remaining: number; registered_count: number }>
+    >`
       UPDATE class_sections
       SET sl_dk = GREATEST(sl_dk - 1, 0)
       WHERE id = ${classSectionId}::uuid
-      RETURNING (sl_max - sl_dk) AS remaining
+      RETURNING (sl_max - sl_dk) AS remaining, sl_dk AS registered_count
     `;
 
-    return updated[0]?.remaining ?? 0;
+    return {
+      remaining: updated[0]?.remaining ?? 0,
+      registeredCount: updated[0]?.registered_count ?? 0,
+    };
   }
 
   // ─── Schedule conflict ─────────────────────────────────────────────────────
@@ -114,11 +130,4 @@ export class RegistrationHelperService {
       },
     });
   }
-}
-
-export interface ScheduleInfo {
-  dayOfWeek: number | null;
-  timeOfDay: string | null;
-  startPeriod: number | null;
-  endPeriod: number | null;
 }

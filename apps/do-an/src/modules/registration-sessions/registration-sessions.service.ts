@@ -1,29 +1,27 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '@app/shared';
+import { SettingsService } from '../settings/settings.service';
 import type { CreateRegistrationSessionDto } from './dto/create-registration-session.dto';
 import type { UpdateRegistrationSessionDto } from './dto/update-registration-session.dto';
 
 @Injectable()
 export class RegistrationSessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(RegistrationSessionsService.name);
+
+  constructor(private readonly settingsService: SettingsService) {}
 
   findAll() {
-    return this.prisma.registrationSession.findMany({
-      orderBy: [{ semester: 'desc' }, { createdAt: 'desc' }],
-    });
+    return [this.getSessionFromSettings()];
   }
 
   async findOne(semester: string) {
-    const session = await this.prisma.registrationSession.findFirst({
-      where: { semester },
-    });
+    const session = this.getSessionFromSettings();
 
-    if (!session) {
+    if (semester !== session.semester) {
       throw new NotFoundException(`Chưa cấu hình kỳ đăng ký ${semester}`);
     }
 
@@ -31,64 +29,106 @@ export class RegistrationSessionsService {
   }
 
   async create(dto: CreateRegistrationSessionDto) {
-    const data = {
-      semester: dto.semester.trim(),
-      name: dto.name?.trim(),
-      openAt: new Date(dto.openAt),
-      closeAt: new Date(dto.closeAt),
-      isActive: dto.isActive ?? true,
-    };
-    this.assertValidRange(data.openAt, data.closeAt);
+    const openAt = new Date(dto.openAt);
+    const closeAt = new Date(dto.closeAt);
+    this.assertValidRange(openAt, closeAt);
 
-    try {
-      return await this.prisma.registrationSession.create({ data });
-    } catch (error) {
-      if (this.isUniqueConstraintError(error)) {
-        throw new ConflictException(`Kỳ ${dto.semester} đã được cấu hình`);
-      }
-      throw error;
-    }
+    await this.settingsService.update({
+      currentSemester: dto.semester.trim(),
+      registrationOpenAt: openAt.toISOString(),
+      registrationCloseAt: closeAt.toISOString(),
+    });
+
+    return this.getSessionFromSettings(dto.name?.trim());
   }
 
   async update(semester: string, dto: UpdateRegistrationSessionDto) {
-    const current = await this.prisma.registrationSession.findFirst({
-      where: { semester },
-    });
+    const current = this.getSessionFromSettings();
 
-    if (!current) {
+    if (semester !== current.semester) {
       throw new NotFoundException(`Chưa cấu hình kỳ đăng ký ${semester}`);
     }
 
-    const data = {
-      ...(dto.semester !== undefined ? { semester: dto.semester.trim() } : {}),
-      ...(dto.name !== undefined ? { name: dto.name?.trim() } : {}),
-      ...(dto.openAt !== undefined ? { openAt: new Date(dto.openAt) } : {}),
-      ...(dto.closeAt !== undefined ? { closeAt: new Date(dto.closeAt) } : {}),
-      ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
-    };
-    const nextOpenAt = data.openAt ?? current.openAt;
-    const nextCloseAt = data.closeAt ?? current.closeAt;
+    const nextOpenAt =
+      dto.openAt !== undefined ? new Date(dto.openAt) : new Date(current.openAt);
+    const nextCloseAt =
+      dto.closeAt !== undefined
+        ? new Date(dto.closeAt)
+        : new Date(current.closeAt);
     this.assertValidRange(nextOpenAt, nextCloseAt);
 
-    try {
-      return await this.prisma.registrationSession.update({
-        where: { id: current.id },
-        data,
-      });
-    } catch (error) {
-      if (this.isUniqueConstraintError(error)) {
-        throw new ConflictException(`Kỳ ${dto.semester} đã được cấu hình`);
-      }
-      throw error;
-    }
+    await this.settingsService.update({
+      ...(dto.semester !== undefined ? { currentSemester: dto.semester.trim() } : {}),
+      ...(dto.openAt !== undefined
+        ? { registrationOpenAt: nextOpenAt.toISOString() }
+        : {}),
+      ...(dto.closeAt !== undefined
+        ? { registrationCloseAt: nextCloseAt.toISOString() }
+        : {}),
+    });
+
+    return this.getSessionFromSettings(dto.name?.trim() ?? current.name);
   }
 
   async remove(semester: string) {
-    const session = await this.findOne(semester);
+    return this.findOne(semester);
+  }
 
-    return this.prisma.registrationSession.delete({
-      where: { id: session.id },
-    });
+  // ─── Student: current session ─────────────────────────────────────────────
+
+  async findCurrent(semester: string) {
+    const session = this.getSessionFromSettings();
+
+    if (semester !== session.semester) {
+      throw new NotFoundException(`Chưa cấu hình kỳ đăng ký ${semester}`);
+    }
+
+    const now = new Date();
+    let status: 'UPCOMING' | 'RUNNING' | 'CLOSED';
+    let canRegister = false;
+    const openAt = new Date(session.openAt);
+    const closeAt = new Date(session.closeAt);
+
+    if (now < openAt) {
+      status = 'UPCOMING';
+    } else if (now > closeAt) {
+      status = 'CLOSED';
+    } else {
+      status = 'RUNNING';
+      canRegister = true;
+    }
+
+    return {
+      id: session.id,
+      semester: session.semester,
+      name: session.name,
+      openAt: openAt.toISOString(),
+      closeAt: closeAt.toISOString(),
+      isActive: session.isActive,
+      status,
+      serverTime: now.toISOString(),
+      canRegister,
+    };
+  }
+
+  // ─── Admin: session stats (hardcoded) ─────────────────────────────────────
+
+  async getStats(semester: string) {
+    // Verify the session exists
+    await this.findOne(semester);
+
+    this.logger.warn(
+      `[getStats] Returning hardcoded stats for semester=${semester}. TODO: implement real aggregation.`,
+    );
+
+    return {
+      semester,
+      estimatedStudents: 18230,
+      registeredStudents: 12480,
+      successRate: 96.4,
+      conflictCount: 312,
+      averageBatchProcessMs: 1800,
+    };
   }
 
   private assertValidRange(openAt: Date, closeAt: Date) {
@@ -103,12 +143,17 @@ export class RegistrationSessionsService {
     }
   }
 
-  private isUniqueConstraintError(error: unknown) {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 'P2002'
-    );
+  private getSessionFromSettings(name?: string) {
+    const settings = this.settingsService.getAll();
+
+    return {
+      id: `settings-${settings.currentSemester}`,
+      semester: settings.currentSemester,
+      name: name ?? `Đăng ký học phần kỳ ${settings.currentSemester}`,
+      openAt: settings.registrationOpenAt,
+      closeAt: settings.registrationCloseAt,
+      isActive: true,
+      createdAt: new Date(0).toISOString(),
+    };
   }
 }

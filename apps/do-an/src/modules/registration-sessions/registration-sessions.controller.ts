@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -13,6 +14,7 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard, Roles, RolesGuard } from '@app/shared';
@@ -23,15 +25,29 @@ import { RegistrationSessionsService } from './registration-sessions.service';
 
 @ApiTags('Registration Sessions')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@UseGuards(JwtAuthGuard)
 @Controller('api/registration-sessions')
 export class RegistrationSessionsController {
   constructor(
     private readonly registrationSessionsService: RegistrationSessionsService,
   ) {}
 
+  // ─── Student: phiên đăng ký hiện hành ─────────────────────────────────────
+  // PHẢI đặt trước route ':semester' để NestJS không match "current" thành param
+
+  @Get('current')
+  @ApiOperation({ summary: 'Sinh viên lấy phiên đăng ký hiện hành' })
+  @ApiQuery({ name: 'semester', required: true, example: '20252' })
+  @ApiOkResponse()
+  findCurrent(@Query('semester') semester: string) {
+    return this.registrationSessionsService.findCurrent(semester);
+  }
+
+  // ─── Admin CRUD ────────────────────────────────────────────────────────────
+
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Admin list registration semester configs' })
   @ApiOkResponse()
   findAll() {
@@ -39,13 +55,26 @@ export class RegistrationSessionsController {
   }
 
   @Get(':semester')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Admin get registration semester config' })
   @ApiOkResponse()
   findOne(@Param('semester') semester: string) {
     return this.registrationSessionsService.findOne(semester);
   }
 
+  @Get(':semester/stats')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Admin lấy thống kê phiên đăng ký (hardcoded)' })
+  @ApiOkResponse()
+  getStats(@Param('semester') semester: string) {
+    return this.registrationSessionsService.getStats(semester);
+  }
+
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Admin create registration semester config' })
   @ApiCreatedResponse()
   create(@Body() dto: CreateRegistrationSessionDto) {
@@ -53,6 +82,8 @@ export class RegistrationSessionsController {
   }
 
   @Patch(':semester')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Admin update registration semester config' })
   @ApiOkResponse()
   update(
@@ -63,6 +94,8 @@ export class RegistrationSessionsController {
   }
 
   @Delete(':semester')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Admin delete registration semester config' })
   @ApiOkResponse()
   remove(@Param('semester') semester: string) {

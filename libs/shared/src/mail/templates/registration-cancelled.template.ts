@@ -22,7 +22,9 @@ const infoRow = (label: string, value: string) => `
   </tr>
 `;
 
-export const registrationCancelledTemplate = (data: RegistrationCancelledData): string => {
+export const registrationCancelledTemplate = (
+  data: RegistrationCancelledData,
+): string => {
   const content = `
     <!-- Status badge -->
     <div style="display:inline-flex;align-items:center;gap:8px;

@@ -3,31 +3,16 @@
  * Convention: reg:{domain}:{...ids}
  */
 export const RegistrationRedisKey = {
-  /** JSON: { id, semester, openAt, closeAt, slotIds[] } — TTL đến closeAt */
+  /** JSON: { id, semester, openAt, closeAt, slotIds[] } — TTL 30 phút */
   session: (semester: string) => `reg:session:${semester}`,
 
-  /** Set<userId> — SV được phép vào slot này — TTL đến slot.closeAt */
+  /** Set<userId> — SV được phép vào slot này — TTL 30 phút */
   slotAllowed: (slotId: string) => `reg:slot:allowed:${slotId}`,
 
-  /** String (integer) — slot còn lại của lớp học phần */
+  /** String (integer) — slot còn lại của lớp học phần — TTL 30 phút */
   sectionSlots: (classSectionId: string) =>
     `reg:section:slots:${classSectionId}`,
 
-  /** Hash — thông tin lịch học: dayOfWeek, timeOfDay, startPeriod, endPeriod... — TTL 1h */
-  sectionInfo: (classSectionId: string) =>
-    `reg:section:info:${classSectionId}`,
-
-  /** Set<classSectionId> — các lớp đã đăng ký ACTIVE của user trong kỳ */
-  userRegistered: (userId: string, semester: string) =>
-    `reg:user:registered:${userId}:${semester}`,
-
-  /** Set<"dayOfWeek:timeOfDay:startPeriod:endPeriod"> — lịch hiện tại để check trùng */
-  userSchedule: (userId: string, semester: string) =>
-    `reg:user:schedule:${userId}:${semester}`,
-
-  /** String (gzip JSON) — toàn bộ TKB của kỳ */
-  tkb: (semester: string) => `reg:tkb:${semester}`,
-
-  /** String — version để FE check cache local */
-  tkbVersion: (semester: string) => `reg:tkb:version:${semester}`,
+  /** Hash — thông tin lịch học: dayOfWeek, timeOfDay, startPeriod, endPeriod... — TTL 30 phút */
+  sectionInfo: (classSectionId: string) => `reg:section:info:${classSectionId}`,
 } as const;

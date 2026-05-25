@@ -5,4 +5,4 @@ import { RegistrationPrewarmService } from './registration-prewarm.service';
 @Module({
   providers: [RegistrationPrewarmService, RegistrationPrewarmCron],
 })
-export class PrewarmModule { }
+export class PrewarmModule {}

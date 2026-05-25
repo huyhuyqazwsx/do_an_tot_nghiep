@@ -7,17 +7,13 @@ import { RegistrationPrewarmService } from './registration-prewarm.service';
 export class RegistrationPrewarmCron {
   private readonly logger = new Logger(RegistrationPrewarmCron.name);
   private isRunning = false;
+  private isReconciling = false;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly prewarmService: RegistrationPrewarmService,
-  ) {}
+  ) { }
 
-  /**
-   * Chạy mỗi phút, kiểm tra slot nào đến giờ prewarm nhưng chưa prewarm.
-   * Sau khi admin tạo RegistrationSession + slots với prewarm_at,
-   * cron này tự động trigger mà không cần admin gọi endpoint thêm.
-   */
   @Cron(CronExpression.EVERY_MINUTE)
   async checkAndPrewarm(): Promise<void> {
     // Tránh chạy concurrent nếu prewarm lâu hơn 1 phút
@@ -34,50 +30,58 @@ export class RegistrationPrewarmCron {
     }
   }
 
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async reconcileRedisSlots(): Promise<void> {
+    if (this.isReconciling) {
+      this.logger.warn('[ReconcileCron] Previous run still in progress, skip');
+      return;
+    }
+
+    this.isReconciling = true;
+    try {
+      await this.prewarmService.reconcileCurrentSemesterSlots();
+    } finally {
+      this.isReconciling = false;
+    }
+  }
+
   private async runPrewarm(): Promise<void> {
     const now = new Date();
+    const settings = await this.prisma.systemSetting.findUnique({
+      where: { id: 1 },
+    });
 
-    // Tìm các slot đã đến prewarm_at, chưa prewarm, session đang active
+    if (!settings) {
+      this.logger.warn('[PrewarmCron] No system settings, skip');
+      return;
+    }
+
+    // Bắt một slot đến giờ prewarm là prewarm lại toàn bộ kỳ hiện tại.
+    // Redis SET/HSET ghi đè, SADD idempotent, nên chạy lại session vẫn ổn.
     const pendingSlots = await this.prisma.registrationSlot.findMany({
       where: {
+        semester: settings.currentSemester,
         prewarmAt: { lte: now },
         isPrewarmed: false,
-        session: { isActive: true },
-      },
-      include: {
-        session: {
-          include: { slots: true },
-        },
       },
     });
 
     if (pendingSlots.length === 0) return;
 
-    // Group theo session để tránh prewarm cùng session nhiều lần
-    const sessionIds = new Set(pendingSlots.map((s) => s.sessionId));
     this.logger.log(
-      `[PrewarmCron] Found ${pendingSlots.length} slots in ${sessionIds.size} sessions to prewarm`,
+      `[PrewarmCron] Found ${pendingSlots.length} slots to prewarm for semester ${settings.currentSemester}`,
     );
 
-    for (const slot of pendingSlots) {
-      // Mỗi slot đại diện cho session — prewarm toàn bộ session 1 lần
-      const session = slot.session;
-
-      // Kiểm tra session chưa được prewarm (tất cả slots chưa prewarmed)
-      const allAlreadyPrewarmed = session.slots.every((s) => s.isPrewarmed);
-      if (allAlreadyPrewarmed) continue;
-
-      try {
-        await this.prewarmService.prewarmSession(session);
-        this.logger.log(
-          `[PrewarmCron] Session ${session.id} (${session.semester}) prewarmed successfully`,
-        );
-      } catch (error) {
-        this.logger.error(
-          `[PrewarmCron] Failed to prewarm session ${session.id}: ${(error as Error).message}`,
-          (error as Error).stack,
-        );
-      }
+    try {
+      await this.prewarmService.prewarmCurrentSettings(settings, pendingSlots);
+      this.logger.log(
+        `[PrewarmCron] Semester ${settings.currentSemester} prewarmed successfully`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `[PrewarmCron] Failed to prewarm semester ${settings.currentSemester}: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
   }
 }

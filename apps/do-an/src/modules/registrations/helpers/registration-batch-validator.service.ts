@@ -4,24 +4,19 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { PrismaService } from '@app/shared';
+import { SettingsService } from '../../settings/settings.service';
 import {
   ClassSectionType,
-  RegistrationBatchItemStatus,
   RegistrationBatchStatus,
   RegistrationBatchType,
 } from '@prisma/client';
 
-type LabValidationSection = {
-  id: string;
-  courseId: string;
-  sectionType: string | null;
-  requiresLab: boolean;
-  sectionCode: string;
-};
-
 @Injectable()
 export class RegistrationBatchValidatorService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   async assertNoPendingBatch(
     userId: string,
@@ -46,113 +41,133 @@ export class RegistrationBatchValidatorService {
   }
 
   async assertRegistrationSessionOpen(semester: string) {
-    const session = await this.prisma.registrationSession.findFirst({
-      where: { semester },
-      select: {
-        semester: true,
-        openAt: true,
-        closeAt: true,
-        isActive: true,
-      },
-    });
+    const settings = this.settingsService.getAll();
 
-    if (!session) {
+    if (semester !== settings.currentSemester) {
       throw new BadRequestException(
-        `Kỳ ${semester} chưa được cấu hình thời gian đăng ký`,
+        `Kỳ ${semester} không phải kỳ hiện tại (${settings.currentSemester})`,
       );
     }
 
-    if (!session.isActive) {
-      throw new BadRequestException(`Kỳ ${semester} chưa mở đăng ký`);
-    }
+    const openAt = new Date(settings.registrationOpenAt);
+    const closeAt = new Date(settings.registrationCloseAt);
 
     const now = new Date();
-    if (now < session.openAt) {
+    if (now < openAt) {
       throw new BadRequestException(
-        `Kỳ ${semester} chưa đến thời gian đăng ký. Mở từ ${session.openAt.toISOString()}`,
+        `Kỳ ${semester} chưa đến thời gian đăng ký. Mở từ ${openAt.toISOString()}`,
       );
     }
 
-    if (now > session.closeAt) {
+    if (now > closeAt) {
       throw new BadRequestException(
-        `Kỳ ${semester} đã hết thời gian đăng ký. Đóng lúc ${session.closeAt.toISOString()}`,
+        `Kỳ ${semester} đã hết thời gian đăng ký. Đóng lúc ${closeAt.toISOString()}`,
       );
     }
   }
 
-  async assertLabSectionsPresent(
-    userId: string,
-    semester: string,
-    sections: LabValidationSection[],
-  ) {
-    const sectionsByCourse = new Map<string, LabValidationSection[]>();
-    for (const section of sections) {
-      const courseSections = sectionsByCourse.get(section.courseId) ?? [];
-      courseSections.push(section);
-      sectionsByCourse.set(section.courseId, courseSections);
+  assertLabPairing(
+    sections: Array<{
+      id: string;
+      courseId: string;
+      sectionType: string | null;
+      requiresLab: boolean;
+      sectionCode: string;
+    }>,
+  ): void {
+    const byCourse = new Map<string, typeof sections>();
+    for (const s of sections) {
+      const group = byCourse.get(s.courseId) ?? [];
+      group.push(s);
+      byCourse.set(s.courseId, group);
     }
 
-    const missingLabByCourse = new Map<string, LabValidationSection>();
-    for (const [courseId, courseSections] of sectionsByCourse) {
-      const mainSections = courseSections.filter((s) => s.requiresLab);
-      if (mainSections.length === 0) continue;
+    for (const [, group] of byCourse) {
+      if (group.length < 2) continue;
 
-      const hasLabInBatch = courseSections.some(
+      const mainSections = group.filter((s) => s.requiresLab);
+      const labSections = group.filter(
         (s) =>
           s.sectionType === ClassSectionType.TN ||
           s.sectionType === ClassSectionType.TH,
       );
-      if (!hasLabInBatch) {
-        missingLabByCourse.set(courseId, mainSections[0]);
+
+      if (mainSections.length > 0 && labSections.length === 0) {
+        throw new BadRequestException(
+          `Môn ${mainSections[0].sectionCode} yêu cầu đăng ký kèm lớp TN/TH. Vui lòng thêm lớp thực hành vào batch.`,
+        );
+      }
+
+      if (labSections.length > 0 && mainSections.length === 0) {
+        throw new BadRequestException(
+          `Lớp TN/TH ${labSections[0].sectionCode} không có lớp lý thuyết tương ứng trong batch.`,
+        );
       }
     }
+  }
 
-    if (missingLabByCourse.size === 0) return;
+  /**
+   * Kiểm tra trùng lịch giữa các buổi học trong batch.
+   * Nhận vào allRows (toàn bộ row của tất cả mã lớp, bao gồm nhiều buổi/tuần).
+   * Hai buổi bị coi là trùng lịch nếu: cùng dayOfWeek, cùng timeOfDay, và tiết học overlap.
+   * Buổi cùng 1 mã lớp (sectionCode) không check vì chú́ng là lịch hợp lệ của cùng 1 lớp.
+   */
+  assertNoScheduleConflict(
+    rows: Array<{
+      id: string;
+      sectionCode: string;
+      dayOfWeek: number | null;
+      timeOfDay: string | null;
+      startPeriod: number | null;
+      endPeriod: number | null;
+    }>,
+  ): void {
+    // Chỉ xét các row có đủ thông tin lịch
+    const scheduled = rows.filter(
+      (r) =>
+        r.dayOfWeek !== null &&
+        r.timeOfDay !== null &&
+        r.startPeriod !== null &&
+        r.endPeriod !== null,
+    ) as Array<{
+      id: string;
+      sectionCode: string;
+      dayOfWeek: number;
+      timeOfDay: string;
+      startPeriod: number;
+      endPeriod: number;
+    }>;
 
-    const successfulLabItems = await this.prisma.registrationBatchItem.findMany(
-      {
-        where: {
-          status: RegistrationBatchItemStatus.SUCCESS,
-          batch: { userId, semester },
-          classSection: {
-            courseId: { in: [...missingLabByCourse.keys()] },
-            sectionType: { in: [ClassSectionType.TN, ClassSectionType.TH] },
-          },
-        },
-        select: {
-          classSectionId: true,
-          batch: { select: { type: true } },
-          classSection: { select: { courseId: true } },
-        },
-        orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
-      },
-    );
-
-    const latestBySection = new Map<
-      string,
-      (typeof successfulLabItems)[number]
-    >();
-    for (const item of successfulLabItems) {
-      if (!item.classSectionId || !item.classSection) continue;
-      if (!latestBySection.has(item.classSectionId)) {
-        latestBySection.set(item.classSectionId, item);
-      }
+    // Nhóm theo (dayOfWeek, timeOfDay)
+    const bySlot = new Map<string, (typeof scheduled)>();
+    for (const row of scheduled) {
+      const key = `${row.dayOfWeek}__${row.timeOfDay}`;
+      const group = bySlot.get(key) ?? [];
+      group.push(row);
+      bySlot.set(key, group);
     }
 
-    for (const item of latestBySection.values()) {
-      if (
-        item.batch.type === RegistrationBatchType.CREATE &&
-        item.classSection
-      ) {
-        missingLabByCourse.delete(item.classSection.courseId);
-      }
-    }
+    for (const [, group] of bySlot) {
+      if (group.length < 2) continue;
 
-    const [missingSection] = missingLabByCourse.values();
-    if (missingSection) {
-      throw new BadRequestException(
-        `Môn ${missingSection.sectionCode} yêu cầu đăng ký kèm lớp TN/TH. Vui lòng thêm lớp thực hành vào batch.`,
-      );
+      // So sánh từng cặp — bỏ qua nếu cùng sectionCode
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          const a = group[i];
+          const b = group[j];
+          if (a.sectionCode === b.sectionCode) continue;
+
+          // Kiểm tra overlap tiết: [a.start, a.end] giao [b.start, b.end]
+          const overlaps = a.startPeriod <= b.endPeriod && b.startPeriod <= a.endPeriod;
+          if (overlaps) {
+            throw new BadRequestException(
+              `Trùng lịch giữa lớp ${a.sectionCode} (tiết ${a.startPeriod}–${a.endPeriod}) ` +
+                `và lớp ${b.sectionCode} (tiết ${b.startPeriod}–${b.endPeriod}) ` +
+                `vào Thứ ${a.dayOfWeek} buổi ${a.timeOfDay}.`,
+            );
+          }
+        }
+      }
     }
   }
 }

@@ -1,14 +1,20 @@
+// ─── Events ──────────────────────────────────────────────────────────────────
+
 export enum RegistrationQueueEvent {
   CREATE_BATCH_REQUESTED = 'REGISTRATION_CREATE_BATCH_REQUESTED',
   CANCEL_BATCH_REQUESTED = 'REGISTRATION_CANCEL_BATCH_REQUESTED',
 }
 
+// ─── Job Items ────────────────────────────────────────────────────────────────
+
+/** Item tối thiểu chứa trong batch (dùng cho CANCEL) */
 export type RegistrationBatchJobItem = {
-  itemId: string;
   classSectionId: string;
 };
 
-export type CreateRegistrationBatchJobItem = RegistrationBatchJobItem & {
+/** Item đầy đủ thông tin cho CREATE — kèm theo thông tin lịch và môn học */
+export type CreateRegistrationBatchJobItem = {
+  classSectionId: string;
   courseId: string;
   courseCode: string;
   courseName: string;
@@ -19,18 +25,24 @@ export type CreateRegistrationBatchJobItem = RegistrationBatchJobItem & {
   endPeriod: number | null;
 };
 
+// ─── Job Payload ──────────────────────────────────────────────────────────────
+
+export type CreateBatchJobPayload = {
+  type: RegistrationQueueEvent.CREATE_BATCH_REQUESTED;
+  batchId: string;
+  userId: string;
+  semester: string;
+  items?: CreateRegistrationBatchJobItem[];
+};
+
+export type CancelBatchJobPayload = {
+  type: RegistrationQueueEvent.CANCEL_BATCH_REQUESTED;
+  batchId: string;
+  userId: string;
+  semester: string;
+  items?: RegistrationBatchJobItem[];
+};
+
 export type RegistrationBatchJobPayload =
-  | {
-      type: RegistrationQueueEvent.CREATE_BATCH_REQUESTED;
-      batchId: string;
-      userId: string;
-      semester: string;
-      items?: CreateRegistrationBatchJobItem[];
-    }
-  | {
-      type: RegistrationQueueEvent.CANCEL_BATCH_REQUESTED;
-      batchId: string;
-      userId: string;
-      semester: string;
-      items?: RegistrationBatchJobItem[];
-    };
+  | CreateBatchJobPayload
+  | CancelBatchJobPayload;

@@ -1,0 +1,32 @@
+studentCode,name,email,password,role,courseYear,department,isActive
+20220001,Nguyễn Văn An,an.nv210001.test@sis.hust.edu.vn,1,STUDENT,2021,CNTT,true
+20220002,Trần Thị Bình,binh.tt210002.test@sis.hust.edu.vn,1,STUDENT,2021,CNTT,true
+20220003,Lê Hoàng Cường,cuong.lh220001.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20220004,Phạm Trà My,my.pt230001.test@sis.hust.edu.vn,1,STUDENT,2023,Hệ thống thông tin,true
+20220005,Vũ Minh Đức,duc.vm220005.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20220006,Đỗ Thu Hà,ha.dt220006.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20220007,Ngô Quang Huy,huy.nq210007.test@sis.hust.edu.vn,1,STUDENT,2021,Khoa học máy tính,true
+20220008,Bùi Khánh Linh,linh.bk230008.test@sis.hust.edu.vn,1,STUDENT,2023,CNTT,true
+20220009,Hoàng Gia Bảo,bao.hg210009.test@sis.hust.edu.vn,1,STUDENT,2021,Kỹ thuật phần mềm,true
+20220010,Phan Ngọc Anh,anh.pn240010.test@sis.hust.edu.vn,1,STUDENT,2024,Hệ thống thông tin,true
+20220011,Trương Hải Nam,nam.th220011.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20220012,Đặng Phương Thảo,thao.dp230012.test@sis.hust.edu.vn,1,STUDENT,2023,CNTT,true
+20220013,Nguyễn Đức Long,long.nd210013.test@sis.hust.edu.vn,1,STUDENT,2021,An toàn thông tin,true
+20220014,Trần Minh Châu,chau.tm240014.test@sis.hust.edu.vn,1,STUDENT,2024,Khoa học máy tính,true
+20220015,Lê Tuấn Kiệt,kiet.lt220015.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20220016,Phạm Khánh Vy,vy.pk230016.test@sis.hust.edu.vn,1,STUDENT,2023,Kỹ thuật phần mềm,true
+20220017,Võ Thành Đạt,dat.vt210017.test@sis.hust.edu.vn,1,STUDENT,2021,CNTT,true
+20220018,Đinh Mai Phương,phuong.dm240018.test@sis.hust.edu.vn,1,STUDENT,2024,Hệ thống thông tin,true
+20220019,Hồ Anh Tuấn,tuan.ha220019.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20220020,Mai Thanh Hằng,hang.mt230020.test@sis.hust.edu.vn,1,STUDENT,2023,An toàn thông tin,true
+20220021,Nguyễn Hoàng Minh,minh.nh210021.test@sis.hust.edu.vn,1,STUDENT,2021,Khoa học máy tính,true
+20220022,Trần Bảo Ngọc,ngoc.tb240022.test@sis.hust.edu.vn,1,STUDENT,2024,CNTT,true
+20220023,Lý Quốc Việt,viet.lq220023.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20220024,Đào Minh Khang,khang.dm230024.test@sis.hust.edu.vn,1,STUDENT,2023,Kỹ thuật máy tính,true
+20220025,Phạm Gia Hân,han.pg210025.test@sis.hust.edu.vn,1,STUDENT,2021,Hệ thống thông tin,true
+20220026,Nguyễn Nhật Linh,linh.nn240026.test@sis.hust.edu.vn,1,STUDENT,2024,Khoa học dữ liệu,true
+20220027,Trịnh Công Sơn,son.tc220027.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20220028,Đỗ Minh Quân,quan.dm230028.test@sis.hust.edu.vn,1,STUDENT,2023,CNTT,true
+20220029,Hoàng Thu Trang,trang.ht210029.test@sis.hust.edu.vn,1,STUDENT,2021,Kỹ thuật máy tính,true
+20220030,Vũ Hải Yến,yen.vh240030.test@sis.hust.edu.vn,1,STUDENT,2024,Kỹ thuật phần mềm,true
+20225330,Bui Nguyen Huy,huy.bn225330@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true

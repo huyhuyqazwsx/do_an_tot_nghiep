@@ -1,9 +1,13 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService, type JwtPayload, REDIS_CLIENT } from '@app/shared';
+import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import type Redis from 'ioredis';
+
+// TODO: Xóa constant này sau khi đã seed tài khoản admin thật vào DB
+const SUPERADMIN_BYPASS_ID = '00000000-0000-0000-0000-000000000001';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +18,36 @@ export class AuthService {
   ) {}
 
   async login(studentCode: string, password: string) {
+    // TODO: Xóa bypass này sau khi đã seed tài khoản admin thật vào DB
+    if (studentCode === '999999999' && password === 'admin') {
+      const sessionId = randomUUID();
+      const payload: JwtPayload = {
+        sub: SUPERADMIN_BYPASS_ID,
+        studentCode: '999999999',
+        role: UserRole.ADMIN,
+        sessionId,
+      };
+      const sessionTtlSeconds = this.getSessionTtlSeconds();
+      await this.redis.set(
+        this.getSessionKey(SUPERADMIN_BYPASS_ID),
+        sessionId,
+        'EX',
+        sessionTtlSeconds,
+      );
+      return {
+        accessToken: this.jwtService.sign(payload),
+        user: {
+          id: SUPERADMIN_BYPASS_ID,
+          studentCode: '999999999',
+          name: 'Super Admin',
+          email: 'admin@system.local',
+          role: 'ADMIN',
+          courseYear: null,
+          department: null,
+        },
+      };
+    }
+
     const user = await this.findAuthUserByStudentCode(studentCode);
 
     if (!user) throw new UnauthorizedException('Tài khoản không tồn tại');
@@ -53,6 +87,19 @@ export class AuthService {
   }
 
   async getMe(uid: string) {
+    // TODO: Xóa bypass này sau khi đã seed tài khoản admin thật vào DB
+    if (uid === SUPERADMIN_BYPASS_ID) {
+      return {
+        id: SUPERADMIN_BYPASS_ID,
+        studentCode: '999999999',
+        name: 'Super Admin',
+        email: 'admin@system.local',
+        role: 'ADMIN',
+        courseYear: null,
+        department: null,
+      };
+    }
+
     const user = await this.findCurrentUserById(uid);
     if (!user) throw new UnauthorizedException();
     return user;

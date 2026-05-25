@@ -5,7 +5,6 @@ import {
   ArrayUnique,
   IsArray,
   IsString,
-  IsUUID,
   Length,
 } from 'class-validator';
 
@@ -17,13 +16,13 @@ export class CreateRegistrationBatchDto {
 
   @ApiProperty({
     type: [String],
-    example: ['uuid-class-section-1', 'uuid-class-section-2'],
-    description: 'Danh sách ID lớp học phần cần đăng ký (1–10 lớp)',
+    example: ['169995', '170001'],
+    description: 'Danh sách mã lớp cần đăng ký (1–10 lớp)',
   })
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(10)
   @ArrayUnique()
-  @IsUUID('4', { each: true })
-  classSectionIds: string[];
+  @IsString({ each: true })
+  sectionCodes: string[];
 }

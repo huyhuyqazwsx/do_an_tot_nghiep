@@ -9,20 +9,14 @@ import {
   RegistrationBatchStatus,
   RegistrationBatchType,
 } from '@prisma/client';
-import {
-  RegistrationHelperService,
-  type ScheduleInfo,
-} from './helpers/registration-helper.service';
+import { RegistrationHelperService } from './helpers/registration-helper.service';
+import type {
+  CreateBatchSectionInfo,
+  ExistingRegistrationInfo,
+  ScheduleInfo,
+} from './types/registration-worker.types';
 
-type CreateBatchSectionInfo = ScheduleInfo & {
-  id: string;
-  courseId: string;
-  course: {
-    code: string;
-    name: string;
-    prerequisite: string | null;
-  };
-};
+const PREWARM_CACHE_TTL_SECONDS = 30 * 60;
 
 @Injectable()
 export class CreateBatchHandler {
@@ -42,16 +36,42 @@ export class CreateBatchHandler {
   ): Promise<void> {
     this.logger.log(`[CreateBatch] Processing batchId=${batchId}`);
 
-    // 1. Load pending items
-    const items =
-      payloadItems?.map((item) => ({
-        id: item.itemId,
-        classSectionId: item.classSectionId,
-      })) ??
-      (await this.prisma.registrationBatchItem.findMany({
-        where: { batchId, status: RegistrationBatchItemStatus.PENDING },
-        select: { id: true, classSectionId: true },
-      }));
+    const existingBatch = await this.prisma.registrationBatch.findUnique({
+      where: { id: batchId },
+      select: { id: true },
+    });
+    if (!existingBatch) {
+      await this.prisma.registrationBatch.create({
+        data: {
+          id: batchId,
+          userId,
+          semester,
+          type: RegistrationBatchType.CREATE,
+          status: RegistrationBatchStatus.PENDING,
+          totalItems: payloadItems?.length ?? 0,
+        },
+      });
+    }
+
+    const existingItems = await this.prisma.registrationBatchItem.findMany({
+      where: { batchId },
+      select: { id: true },
+    });
+    if (existingItems.length === 0 && payloadItems && payloadItems.length > 0) {
+      await this.prisma.registrationBatchItem.createMany({
+        data: payloadItems.map((item) => ({
+          batchId,
+          classSectionId: item.classSectionId,
+          status: RegistrationBatchItemStatus.PENDING,
+        })),
+      });
+    }
+
+    const items = await this.prisma.registrationBatchItem.findMany({
+      where: { batchId, status: RegistrationBatchItemStatus.PENDING },
+      select: { id: true, classSectionId: true },
+      orderBy: { createdAt: 'asc' },
+    });
 
     if (items.length === 0) {
       await this.prisma.registrationBatch.update({
@@ -72,34 +92,43 @@ export class CreateBatchHandler {
       .map((i) => i.classSectionId)
       .filter(Boolean) as string[];
 
-    const sections: CreateBatchSectionInfo[] =
-      payloadItems?.map((item) => ({
-        id: item.classSectionId,
-        courseId: item.courseId,
-        dayOfWeek: item.dayOfWeek,
-        timeOfDay: item.timeOfDay,
-        startPeriod: item.startPeriod,
-        endPeriod: item.endPeriod,
-        course: {
-          code: item.courseCode,
-          name: item.courseName,
-          prerequisite: item.prerequisite,
-        },
-      })) ??
-      (await this.prisma.classSection.findMany({
-        where: { id: { in: classSectionIds } },
-        select: {
-          id: true,
-          courseId: true,
-          dayOfWeek: true,
-          timeOfDay: true,
-          startPeriod: true,
-          endPeriod: true,
-          course: {
-            select: { code: true, name: true, prerequisite: true },
+    const payloadItemsBySectionId = new Map(
+      (payloadItems ?? []).map((item) => [item.classSectionId, item]),
+    );
+    const hasPayloadForAllSections = classSectionIds.every((id) =>
+      payloadItemsBySectionId.has(id),
+    );
+    const sections: CreateBatchSectionInfo[] = hasPayloadForAllSections
+      ? classSectionIds.map((classSectionId) => {
+          const item = payloadItemsBySectionId.get(classSectionId)!;
+          return {
+            id: item.classSectionId,
+            courseId: item.courseId,
+            dayOfWeek: item.dayOfWeek,
+            timeOfDay: item.timeOfDay,
+            startPeriod: item.startPeriod,
+            endPeriod: item.endPeriod,
+            course: {
+              code: item.courseCode,
+              name: item.courseName,
+              prerequisite: item.prerequisite,
+            },
+          };
+        })
+      : await this.prisma.classSection.findMany({
+          where: { id: { in: classSectionIds } },
+          select: {
+            id: true,
+            courseId: true,
+            dayOfWeek: true,
+            timeOfDay: true,
+            startPeriod: true,
+            endPeriod: true,
+            course: {
+              select: { code: true, name: true, prerequisite: true },
+            },
           },
-        },
-      }));
+        });
     const sectionMap = new Map(sections.map((s) => [s.id, s]));
 
     // 3. Load trạng thái đang đăng ký từ ticket SUCCESS mới nhất.
@@ -107,11 +136,10 @@ export class CreateBatchHandler {
       where: {
         status: RegistrationBatchItemStatus.SUCCESS,
         classSectionId: { not: null },
-        batch: { userId, semester },
+        batch: { userId, semester, type: RegistrationBatchType.CREATE },
       },
       select: {
         classSectionId: true,
-        batch: { select: { type: true } },
         classSection: {
           select: {
             courseId: true,
@@ -125,7 +153,7 @@ export class CreateBatchHandler {
       orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
     });
 
-    const latestBySection = new Map<string, (typeof successfulItems)[number]>();
+    const latestBySection = new Map<string, (typeof successfulItems)[0]>();
     for (const item of successfulItems) {
       if (!item.classSectionId || !item.classSection) continue;
       if (!latestBySection.has(item.classSectionId)) {
@@ -133,14 +161,9 @@ export class CreateBatchHandler {
       }
     }
 
-    const existingRegs: Array<ScheduleInfo & { courseId: string }> = [];
+    const existingRegs: ExistingRegistrationInfo[] = [];
     for (const item of latestBySection.values()) {
-      if (
-        item.batch.type !== RegistrationBatchType.CREATE ||
-        !item.classSection
-      ) {
-        continue;
-      }
+      if (!item.classSection) continue;
       existingRegs.push(item.classSection);
     }
 
@@ -200,24 +223,24 @@ export class CreateBatchHandler {
       }
 
       // Validate tiên quyết
-      const hasPrereq = await this.helper.checkPrerequisite(
-        userId,
-        section.course.prerequisite,
-      );
-      if (!hasPrereq) {
-        await this.helper.markItemFailed(
-          item.id,
-          `Chưa hoàn thành môn tiên quyết ${section.course.prerequisite}`,
-        );
-        failCount++;
-        continue;
-      }
+      // const hasPrereq = await this.helper.checkPrerequisite(
+      //   userId,
+      //   section.course.prerequisite,
+      // );
+      // if (!hasPrereq) {
+      //   await this.helper.markItemFailed(
+      //     item.id,
+      //     `Chưa hoàn thành môn tiên quyết ${section.course.prerequisite}`,
+      //   );
+      //   failCount++;
+      //   continue;
+      // }
 
       // Lock slot + ghi kết quả ticket
       try {
-        const remainingSlots = await this.prisma.$transaction(async (tx) => {
-          const remaining = await this.helper.acquireSlot(
-            tx as unknown as PrismaService,
+        const slotState = await this.prisma.$transaction(async (tx) => {
+          const result = await this.helper.acquireSlot(
+            tx,
             item.classSectionId!,
           );
 
@@ -238,33 +261,48 @@ export class CreateBatchHandler {
             where: { id: item.id },
             data: {
               status: RegistrationBatchItemStatus.SUCCESS,
-              remainingSlots: remaining,
+              remainingSlots: result.remaining,
               processedAt: new Date(),
             },
           });
 
-          return remaining;
+          return result;
         });
 
         // Update in-memory tracking
         batchCourseIds.add(section.courseId);
         batchSchedule.push({
           dayOfWeek: section.dayOfWeek,
-          timeOfDay: section.timeOfDay as string | null,
+          timeOfDay: section.timeOfDay,
           startPeriod: section.startPeriod,
           endPeriod: section.endPeriod,
         });
 
         const pipeline = this.redis.pipeline();
-        pipeline.del(RegistrationRedisKey.userRegistered(userId, semester));
-        pipeline.del(RegistrationRedisKey.userSchedule(userId, semester));
-        pipeline.del(RegistrationRedisKey.sectionSlots(item.classSectionId));
-        pipeline.del(RegistrationRedisKey.sectionInfo(item.classSectionId));
+
+        // 1. Ghi số slot trống chuẩn từ DB transaction
+        const sectionSlotsKey = RegistrationRedisKey.sectionSlots(
+          item.classSectionId,
+        );
+        const sectionInfoKey = RegistrationRedisKey.sectionInfo(
+          item.classSectionId,
+        );
+        pipeline.set(sectionSlotsKey, slotState.remaining.toString());
+        pipeline.expire(sectionSlotsKey, PREWARM_CACHE_TTL_SECONDS);
+
+        // 2. Ghi registeredCount chuẩn từ DB transaction
+        pipeline.hset(
+          sectionInfoKey,
+          'registeredCount',
+          slotState.registeredCount.toString(),
+        );
+        pipeline.expire(sectionInfoKey, PREWARM_CACHE_TTL_SECONDS);
+
         await pipeline.exec();
 
         successCount++;
         this.logger.log(
-          `[CreateBatch] item=${item.id} SUCCESS remaining=${remainingSlots}`,
+          `[CreateBatch] item=${item.id} SUCCESS remaining=${slotState.remaining}`,
         );
       } catch (err) {
         const reason = err instanceof Error ? err.message : 'Lỗi xử lý';

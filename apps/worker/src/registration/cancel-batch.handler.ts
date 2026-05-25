@@ -11,6 +11,8 @@ import {
 } from '@prisma/client';
 import { RegistrationHelperService } from './helpers/registration-helper.service';
 
+const PREWARM_CACHE_TTL_SECONDS = 30 * 60;
+
 @Injectable()
 export class CancelBatchHandler {
   private readonly logger = new Logger(CancelBatchHandler.name);
@@ -29,15 +31,45 @@ export class CancelBatchHandler {
   ): Promise<void> {
     this.logger.log(`[CancelBatch] Processing batchId=${batchId}`);
 
-    const items =
-      payloadItems?.map((item) => ({
-        id: item.itemId,
-        classSectionId: item.classSectionId,
-      })) ??
-      (await this.prisma.registrationBatchItem.findMany({
-        where: { batchId, status: RegistrationBatchItemStatus.PENDING },
-        select: { id: true, classSectionId: true },
-      }));
+    // 1. Tạo batch nếu chưa tồn tại
+    const existingBatch = await this.prisma.registrationBatch.findUnique({
+      where: { id: batchId },
+      select: { id: true },
+    });
+    if (!existingBatch) {
+      await this.prisma.registrationBatch.create({
+        data: {
+          id: batchId,
+          userId,
+          semester,
+          type: RegistrationBatchType.CANCEL,
+          status: RegistrationBatchStatus.PENDING,
+          totalItems: payloadItems?.length ?? 0,
+        },
+      });
+    }
+
+    // 2. Tạo batch items nếu chưa tồn tại (để hỗ trợ retry khi job bị redeliver)
+    const existingItems = await this.prisma.registrationBatchItem.findMany({
+      where: { batchId },
+      select: { id: true },
+    });
+    if (existingItems.length === 0 && payloadItems && payloadItems.length > 0) {
+      await this.prisma.registrationBatchItem.createMany({
+        data: payloadItems.map((item) => ({
+          batchId,
+          classSectionId: item.classSectionId,
+          status: RegistrationBatchItemStatus.PENDING,
+        })),
+      });
+    }
+
+    // 3. Lấy danh sách items cần xử lý
+    const items = await this.prisma.registrationBatchItem.findMany({
+      where: { batchId, status: RegistrationBatchItemStatus.PENDING },
+      select: { id: true, classSectionId: true },
+      orderBy: { createdAt: 'asc' },
+    });
 
     let successCount = 0;
     let failCount = 0;
@@ -50,25 +82,33 @@ export class CancelBatchHandler {
       }
 
       try {
-        const latestItem = await this.prisma.registrationBatchItem.findFirst({
+        // Tìm item đăng ký gốc (CREATE) đang SUCCESS cần hủy
+        const currentItem = await this.prisma.registrationBatchItem.findFirst({
           where: {
             classSectionId: item.classSectionId,
             status: RegistrationBatchItemStatus.SUCCESS,
-            batch: { userId, semester },
+            batch: { userId, semester, type: RegistrationBatchType.CREATE },
           },
           select: {
-            batch: { select: { type: true } },
+            id: true,
+            classSection: {
+              select: {
+                dayOfWeek: true,
+                timeOfDay: true,
+                startPeriod: true,
+                endPeriod: true,
+              },
+            },
           },
-          orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
         });
 
-        if (latestItem?.batch.type !== RegistrationBatchType.CREATE) {
+        if (!currentItem) {
           throw new Error('Đăng ký không tồn tại hoặc đã hủy');
         }
 
-        const remainingSlots = await this.prisma.$transaction(async (tx) => {
-          const remainingSlots = await this.helper.releaseSlot(
-            tx as unknown as PrismaService,
+        const slotState = await this.prisma.$transaction(async (tx) => {
+          const result = await this.helper.releaseSlot(
+            tx,
             item.classSectionId!,
           );
 
@@ -83,34 +123,63 @@ export class CancelBatchHandler {
             },
           });
 
+          // Cập nhật item đăng ký gốc → CANCELLED
           await tx.registrationBatchItem.update({
-            where: { id: item.id },
+            where: { id: currentItem.id },
             data: {
-              status: RegistrationBatchItemStatus.SUCCESS,
-              remainingSlots,
+              status: RegistrationBatchItemStatus.CANCELLED,
+              remainingSlots: result.remaining,
               processedAt: new Date(),
             },
           });
 
-          return remainingSlots;
+          // Cập nhật cancel batch item → SUCCESS
+          await tx.registrationBatchItem.update({
+            where: { id: item.id },
+            data: {
+              status: RegistrationBatchItemStatus.SUCCESS,
+              remainingSlots: result.remaining,
+              processedAt: new Date(),
+            },
+          });
+
+          return result;
         });
 
+        // Cập nhật Redis cache trực tiếp (ngược với create-batch)
         const pipeline = this.redis.pipeline();
-        pipeline.del(RegistrationRedisKey.userRegistered(userId, semester));
-        pipeline.del(RegistrationRedisKey.userSchedule(userId, semester));
-        pipeline.del(RegistrationRedisKey.sectionSlots(item.classSectionId));
-        pipeline.del(RegistrationRedisKey.sectionInfo(item.classSectionId));
+
+        // 1. Ghi số slot trống chuẩn từ DB transaction
+        const sectionSlotsKey = RegistrationRedisKey.sectionSlots(
+          item.classSectionId,
+        );
+        const sectionInfoKey = RegistrationRedisKey.sectionInfo(
+          item.classSectionId,
+        );
+        pipeline.set(sectionSlotsKey, slotState.remaining.toString());
+        pipeline.expire(sectionSlotsKey, PREWARM_CACHE_TTL_SECONDS);
+
+        // 2. Ghi registeredCount chuẩn từ DB transaction
+        pipeline.hset(
+          sectionInfoKey,
+          'registeredCount',
+          slotState.registeredCount.toString(),
+        );
+        pipeline.expire(sectionInfoKey, PREWARM_CACHE_TTL_SECONDS);
+
         await pipeline.exec();
 
         successCount++;
         this.logger.log(
-          `[CancelBatch] item=${item.id} SUCCESS remaining=${remainingSlots}`,
+          `[CancelBatch] item=${currentItem.id} SUCCESS remaining=${slotState.remaining}`,
         );
       } catch (err) {
         const reason = err instanceof Error ? err.message : 'Lỗi xử lý';
         await this.helper.markItemFailed(item.id, reason);
         failCount++;
-        this.logger.warn(`[CancelBatch] item=${item.id} FAILED: ${reason}`);
+        this.logger.warn(
+          `[CancelBatch] classSectionId=${item.classSectionId ?? 'null'} FAILED: ${reason}`,
+        );
       }
     }
 

@@ -21,7 +21,7 @@ export class MailService {
 
   constructor(private readonly template: MailTemplateService) {
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
+      service: 'Gmail',
       auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_APP_PASSWORD,
@@ -38,7 +38,9 @@ export class MailService {
       subject: options.subject,
       html: options.html,
     });
-    this.logger.log(`[Mail] Sent to ${options.to} | subject: "${options.subject}"`);
+    this.logger.log(
+      `[Mail] Sent to ${options.to} | subject: "${options.subject}"`,
+    );
   }
 
   // ─── Typed methods theo từng event ─────────────────────────────────────────

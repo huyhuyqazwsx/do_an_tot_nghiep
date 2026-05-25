@@ -14,6 +14,10 @@ import { ApiLoggerMiddleware } from './common/middlewares/api-logger.middleware'
 import { UsersModule } from './modules/users/users.module';
 import { RegistrationsModule } from './modules/registrations/registrations.module';
 import { RegistrationSessionsModule } from './modules/registration-sessions/registration-sessions.module';
+import { MailTestingModule } from './modules/mail-testing/mail-testing.module';
+import { GradesModule } from './modules/grades/grades.module';
+import { RegistrationSlotsModule } from './modules/registration-slots/registration-slots.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -27,6 +31,10 @@ import { RegistrationSessionsModule } from './modules/registration-sessions/regi
     ClassSectionsModule,
     RegistrationSessionsModule,
     RegistrationsModule,
+    MailTestingModule,
+    GradesModule,
+    RegistrationSlotsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

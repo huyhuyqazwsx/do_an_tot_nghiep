@@ -8,7 +8,9 @@ export interface RegistrationFailedData {
   reason: string;
 }
 
-export const registrationFailedTemplate = (data: RegistrationFailedData): string => {
+export const registrationFailedTemplate = (
+  data: RegistrationFailedData,
+): string => {
   const content = `
     <!-- Status badge -->
     <div style="display:inline-flex;align-items:center;gap:8px;

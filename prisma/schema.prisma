@@ -77,6 +77,7 @@ enum RegistrationBatchStatus {
 enum RegistrationBatchItemStatus {
   PENDING
   SUCCESS
+  CANCELLED
   FAILED
 }
 
@@ -199,7 +200,7 @@ model RegistrationBatchItem {
   batchId        String                      @map("batch_id") @db.Uuid
   classSectionId String?                     @map("class_section_id") @db.Uuid
   status         RegistrationBatchItemStatus
-  // PENDING | SUCCESS | FAILED
+  // PENDING | SUCCESS | CANCELLED | FAILED
   failureReason  String?                     @map("failure_reason") @db.Text
   remainingSlots Int?                        @map("remaining_slots")
   createdAt      DateTime                    @default(now()) @map("created_at")
@@ -236,29 +237,11 @@ model StudentGrade {
 }
 
 // ============================================================
-// REGISTRATION SESSIONS
-// ============================================================
-model RegistrationSession {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  semester  String   @db.VarChar(10)
-  name      String?  @db.VarChar(100)
-  openAt    DateTime @map("open_at")
-  closeAt   DateTime @map("close_at")
-  isActive  Boolean  @default(false) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  slots RegistrationSlot[]
-
-  @@unique([semester], name: "registration_sessions_semester_key")
-  @@map("registration_sessions")
-}
-
-// ============================================================
 // REGISTRATION SLOTS
 // ============================================================
 model RegistrationSlot {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sessionId     String    @map("session_id") @db.Uuid
+  semester      String    @db.VarChar(10)
   name          String?   @db.VarChar(100)
   studentFilter Json      @map("student_filter") @db.JsonB
   // { course_year: 2021 } or { department: "CNTT" }
@@ -269,9 +252,24 @@ model RegistrationSlot {
   prewarmedAt   DateTime? @map("prewarmed_at")
   createdAt     DateTime  @default(now()) @map("created_at")
 
-  session RegistrationSession @relation(fields: [sessionId], references: [id])
-
+  @@index([semester], name: "idx_registration_slots_semester")
   @@map("registration_slots")
+}
+
+// ============================================================
+// SYSTEM SETTINGS (singleton row, id = 1)
+// ============================================================
+model SystemSetting {
+  id                    Int      @id @default(1)
+  currentSemester       String   @map("current_semester") @db.VarChar(10)
+  semesterStartDate     String   @map("semester_start_date") @db.VarChar(20)
+  semesterEndDate       String   @map("semester_end_date") @db.VarChar(20)
+  registrationOpenAt    DateTime @default(now()) @map("registration_open_at")
+  registrationCloseAt   DateTime @default(dbgenerated("'2099-12-31 23:59:59'::timestamp without time zone")) @map("registration_close_at")
+  maxCreditsPerSemester Int      @map("max_credits_per_semester")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
 }
 
 // ============================================================

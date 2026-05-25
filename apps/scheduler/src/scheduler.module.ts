@@ -18,4 +18,4 @@ import { PrewarmModule } from './prewarm/prewarm.module';
     // OutboxModule (sau khi implement outbox processor)
   ],
 })
-export class SchedulerModule { }
+export class SchedulerModule {}

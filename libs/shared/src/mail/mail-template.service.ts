@@ -12,7 +12,11 @@ import {
   type RegistrationFailedData,
 } from './templates/registration-failed.template';
 
-export { RegistrationSuccessData, RegistrationCancelledData, RegistrationFailedData };
+export {
+  RegistrationSuccessData,
+  RegistrationCancelledData,
+  RegistrationFailedData,
+};
 
 export interface RenderedMail {
   subject: string;

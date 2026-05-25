@@ -4,19 +4,25 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
-  IsUUID,
+  IsString,
+  Length,
 } from 'class-validator';
 
 export class CancelRegistrationBatchDto {
+  @ApiProperty({ example: '20252', description: 'Mã học kỳ' })
+  @IsString()
+  @Length(1, 10)
+  semester: string;
+
   @ApiProperty({
     type: [String],
-    example: ['uuid-class-section-1', 'uuid-class-section-2'],
-    description: 'Danh sách ID lớp học phần cần hủy (1–10)',
+    example: ['169995', '170001'],
+    description: 'Danh sách mã lớp cần hủy (1–10)',
   })
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(10)
   @ArrayUnique()
-  @IsUUID('4', { each: true })
-  classSectionIds: string[];
+  @IsString({ each: true })
+  sectionCodes: string[];
 }
