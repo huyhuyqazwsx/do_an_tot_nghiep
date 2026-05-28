@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@app/shared';
 import { REDIS_CLIENT } from '@app/shared';
 import { RegistrationRedisKey } from '@app/shared';
-import type { RegistrationBatchJobItem } from '@app/shared';
+import type { CancelRegistrationBatchJobItem } from '@app/shared';
 import Redis from 'ioredis';
 import {
   RegistrationBatchItemStatus,
@@ -21,20 +21,18 @@ export class CancelBatchHandler {
     private readonly prisma: PrismaService,
     private readonly helper: RegistrationHelperService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) { }
+  ) {}
 
   async handle(
     batchId: string,
     userId: string,
     semester: string,
-    payloadItems?: RegistrationBatchJobItem[],
+    payloadItems?: CancelRegistrationBatchJobItem[],
     queuedAt?: string,
   ): Promise<void> {
     const processingStartedAt = Date.now();
     const timing = {
-      ensureMs: 0,
       loadPendingItemsMs: 0,
-      loadCurrentRegsMs: 0,
       processItemsMs: 0,
       dbTxnMs: 0,
       redisMs: 0,
@@ -61,47 +59,8 @@ export class CancelBatchHandler {
       `[CancelBatch] START batchId=${batchId} userId=${userId} semester=${semester} queuedWait=${queueWaitMs}ms payloadItems=${payloadItems?.length ?? 0}`,
     );
 
-    // 1+2. Ensure batch + items song song (dùng upsert pattern)
-    await time('ensureMs', async () => {
-      const ensureBatch = this.prisma.registrationBatch
-        .findUnique({ where: { id: batchId }, select: { id: true } })
-        .then((existing) => {
-          if (!existing) {
-            return this.prisma.registrationBatch.create({
-              data: {
-                id: batchId,
-                userId,
-                semester,
-                type: RegistrationBatchType.CANCEL,
-                status: RegistrationBatchStatus.PENDING,
-                totalItems: payloadItems?.length ?? 0,
-              },
-            });
-          }
-        });
-
-      const ensureItems = this.prisma.registrationBatchItem
-        .findMany({ where: { batchId }, select: { id: true } })
-        .then((existingItems) => {
-          if (
-            existingItems.length === 0 &&
-            payloadItems &&
-            payloadItems.length > 0
-          ) {
-            return this.prisma.registrationBatchItem.createMany({
-              data: payloadItems.map((item) => ({
-                batchId,
-                classSectionId: item.classSectionId,
-                status: RegistrationBatchItemStatus.PENDING,
-              })),
-            });
-          }
-        });
-
-      await Promise.all([ensureBatch, ensureItems]);
-    });
-
-    // 3. Lấy danh sách items cần xử lý
+    // Batch + items đã được API tạo sẵn trong DB trước khi publish.
+    // Chỉ cần load items PENDING để xử lý.
     const items = await time('loadPendingItemsMs', () =>
       this.prisma.registrationBatchItem.findMany({
         where: { batchId, status: RegistrationBatchItemStatus.PENDING },
@@ -110,31 +69,10 @@ export class CancelBatchHandler {
       }),
     );
 
-    // 4. Batch load tất cả current registrations trước vòng lặp
-    const classSectionIds = items
-      .map((i) => i.classSectionId)
-      .filter(Boolean) as string[];
-
-    const currentRegsMap = await time('loadCurrentRegsMs', async () => {
-      const currentRegs = await this.prisma.registrationBatchItem.findMany({
-        where: {
-          classSectionId: { in: classSectionIds },
-          status: RegistrationBatchItemStatus.SUCCESS,
-          batch: { userId, semester, type: RegistrationBatchType.CREATE },
-        },
-        select: { id: true, classSectionId: true },
-        orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
-      });
-
-      // Giữ item mới nhất cho mỗi classSection
-      const map = new Map<string, string>();
-      for (const reg of currentRegs) {
-        if (reg.classSectionId && !map.has(reg.classSectionId)) {
-          map.set(reg.classSectionId, reg.id);
-        }
-      }
-      return map;
-    });
+    // Build sourceItemId map từ payload (API đã gửi kèm)
+    const sourceItemMap = new Map(
+      (payloadItems ?? []).map((item) => [item.classSectionId, item.sourceItemId]),
+    );
 
     let successCount = 0;
     let failCount = 0;
@@ -160,9 +98,9 @@ export class CancelBatchHandler {
         continue;
       }
 
-      // Lookup từ map đã load sẵn — O(1)
-      const currentItemId = currentRegsMap.get(item.classSectionId);
-      if (!currentItemId) {
+      // Lookup sourceItemId từ payload — O(1)
+      const sourceItemId = sourceItemMap.get(item.classSectionId);
+      if (!sourceItemId) {
         const failStartedAt = Date.now();
         await this.helper.markItemFailed(
           item.id,
@@ -185,50 +123,45 @@ export class CancelBatchHandler {
             item.classSectionId!,
           );
 
-          // Gộp outbox + 2 updates chạy song song trong transaction
-          await Promise.all([
-            tx.outbox.create({
-              data: {
-                eventType: 'REGISTRATION_CANCELLED',
-                payload: {
-                  userId,
-                  classSectionId: item.classSectionId,
-                  semester,
-                },
+          await tx.outbox.create({
+            data: {
+              eventType: 'REGISTRATION_CANCELLED',
+              payload: {
+                userId,
+                classSectionId: item.classSectionId,
+                semester,
               },
-            }),
-            // Cập nhật item đăng ký gốc → CANCELLED
-            tx.registrationBatchItem.update({
-              where: { id: currentItemId },
-              data: {
-                status: RegistrationBatchItemStatus.CANCELLED,
-                remainingSlots: result.remaining,
-                processedAt: new Date(),
-              },
-            }),
-            // Cập nhật cancel batch item → SUCCESS
-            tx.registrationBatchItem.update({
-              where: { id: item.id },
-              data: {
-                status: RegistrationBatchItemStatus.SUCCESS,
-                remainingSlots: result.remaining,
-                processedAt: new Date(),
-              },
-            }),
-          ]);
+            },
+          });
+
+          // Cập nhật item đăng ký gốc → CANCELLED
+          await tx.registrationBatchItem.update({
+            where: { id: sourceItemId },
+            data: {
+              status: RegistrationBatchItemStatus.CANCELLED,
+              remainingSlots: result.remaining,
+              processedAt: new Date(),
+            },
+          });
+
+          // Cập nhật cancel batch item → SUCCESS
+          await tx.registrationBatchItem.update({
+            where: { id: item.id },
+            data: {
+              status: RegistrationBatchItemStatus.SUCCESS,
+              remainingSlots: result.remaining,
+              processedAt: new Date(),
+            },
+          });
 
           return result;
         });
         itemTiming.dbTxnMs = Date.now() - txnStartedAt;
         timing.dbTxnMs += itemTiming.dbTxnMs;
 
-        // Xóa khỏi map để tránh cancel lại
-        currentRegsMap.delete(item.classSectionId);
-
-        // Cập nhật Redis cache trực tiếp (ngược với create-batch)
+        // Cập nhật Redis cache trực tiếp
         const pipeline = this.redis.pipeline();
 
-        // 1. Ghi số slot trống chuẩn từ DB transaction
         const sectionSlotsKey = RegistrationRedisKey.sectionSlots(
           item.classSectionId,
         );
@@ -238,7 +171,6 @@ export class CancelBatchHandler {
         pipeline.set(sectionSlotsKey, slotState.remaining.toString());
         pipeline.expire(sectionSlotsKey, PREWARM_CACHE_TTL_SECONDS);
 
-        // 2. Ghi registeredCount chuẩn từ DB transaction
         pipeline.hset(
           sectionInfoKey,
           'registeredCount',
@@ -253,7 +185,7 @@ export class CancelBatchHandler {
 
         successCount++;
         this.logger.log(
-          `[CancelBatchItemTiming] batchId=${batchId} item=${item.id} sourceItem=${currentItemId} section=${item.classSectionId} SUCCESS total=${Date.now() - itemStartedAt}ms dbTxn=${itemTiming.dbTxnMs}ms redis=${itemTiming.redisMs}ms remaining=${slotState.remaining}`,
+          `[CancelBatchItemTiming] batchId=${batchId} item=${item.id} sourceItem=${sourceItemId} section=${item.classSectionId} SUCCESS total=${Date.now() - itemStartedAt}ms dbTxn=${itemTiming.dbTxnMs}ms redis=${itemTiming.redisMs}ms remaining=${slotState.remaining}`,
         );
       } catch (err) {
         const reason = err instanceof Error ? err.message : 'Lỗi xử lý';
@@ -309,7 +241,7 @@ export class CancelBatchHandler {
     );
 
     this.logger.log(
-      `[CancelBatchTiming] batchId=${batchId} total=${Date.now() - processingStartedAt}ms queueWait=${queueWaitMs}ms items=${totalItems} success=${successCount} fail=${failCount} ensure=${timing.ensureMs}ms loadPending=${timing.loadPendingItemsMs}ms loadCurrentRegs=${timing.loadCurrentRegsMs}ms processItems=${timing.processItemsMs}ms dbTxn=${timing.dbTxnMs}ms redis=${timing.redisMs}ms markFailed=${timing.markFailedMs}ms finalizeBatch=${timing.finalizeBatchMs}ms writeMetrics=${timing.writeMetricsMs}ms`,
+      `[CancelBatchTiming] batchId=${batchId} total=${Date.now() - processingStartedAt}ms queueWait=${queueWaitMs}ms items=${totalItems} success=${successCount} fail=${failCount} loadPending=${timing.loadPendingItemsMs}ms processItems=${timing.processItemsMs}ms dbTxn=${timing.dbTxnMs}ms redis=${timing.redisMs}ms markFailed=${timing.markFailedMs}ms finalizeBatch=${timing.finalizeBatchMs}ms writeMetrics=${timing.writeMetricsMs}ms`,
     );
   }
 }

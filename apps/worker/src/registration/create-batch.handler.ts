@@ -33,8 +33,6 @@ export class CreateBatchHandler {
   ): Promise<void> {
     const processingStartedAt = Date.now();
     const timing = {
-      ensureBatchMs: 0,
-      ensureItemsMs: 0,
       loadPendingItemsMs: 0,
       loadSectionsMs: 0,
       processItemsMs: 0,
@@ -63,45 +61,8 @@ export class CreateBatchHandler {
       `[CreateBatch] START batchId=${batchId} userId=${userId} semester=${semester} queueWait=${queueWaitMs}ms payloadItems=${payloadItems?.length ?? 0}`,
     );
 
-    await time('ensureBatchMs', async () => {
-      const existingBatch = await this.prisma.registrationBatch.findUnique({
-        where: { id: batchId },
-        select: { id: true },
-      });
-      if (!existingBatch) {
-        await this.prisma.registrationBatch.create({
-          data: {
-            id: batchId,
-            userId,
-            semester,
-            type: RegistrationBatchType.CREATE,
-            status: RegistrationBatchStatus.PENDING,
-            totalItems: payloadItems?.length ?? 0,
-          },
-        });
-      }
-    });
-
-    await time('ensureItemsMs', async () => {
-      const existingItems = await this.prisma.registrationBatchItem.findMany({
-        where: { batchId },
-        select: { id: true },
-      });
-      if (
-        existingItems.length === 0 &&
-        payloadItems &&
-        payloadItems.length > 0
-      ) {
-        await this.prisma.registrationBatchItem.createMany({
-          data: payloadItems.map((item) => ({
-            batchId,
-            classSectionId: item.classSectionId,
-            status: RegistrationBatchItemStatus.PENDING,
-          })),
-        });
-      }
-    });
-
+    // Batch + items đã được API tạo sẵn trong DB trước khi publish.
+    // Chỉ cần load items PENDING để xử lý.
     const items = await time('loadPendingItemsMs', () =>
       this.prisma.registrationBatchItem.findMany({
         where: { batchId, status: RegistrationBatchItemStatus.PENDING },
@@ -124,7 +85,7 @@ export class CreateBatchHandler {
         `[CreateBatch] batchId=${batchId} ${RegistrationBatchStatus.COMPLETED} — success=0 fail=0`,
       );
       this.logger.log(
-        `[CreateBatchTiming] batchId=${batchId} total=${Date.now() - processingStartedAt}ms queueWait=${queueWaitMs}ms ensureBatch=${timing.ensureBatchMs}ms ensureItems=${timing.ensureItemsMs}ms loadPending=${timing.loadPendingItemsMs}ms finalizeBatch=${timing.finalizeBatchMs}ms`,
+        `[CreateBatchTiming] batchId=${batchId} total=${Date.now() - processingStartedAt}ms queueWait=${queueWaitMs}ms loadPending=${timing.loadPendingItemsMs}ms finalizeBatch=${timing.finalizeBatchMs}ms`,
       );
       return;
     }
@@ -357,7 +318,7 @@ export class CreateBatchHandler {
     );
 
     this.logger.log(
-      `[CreateBatchTiming] batchId=${batchId} total=${Date.now() - processingStartedAt}ms queueWait=${queueWaitMs}ms items=${totalItems} success=${successCount} fail=${failCount} ensureBatch=${timing.ensureBatchMs}ms ensureItems=${timing.ensureItemsMs}ms loadPending=${timing.loadPendingItemsMs}ms loadSections=${timing.loadSectionsMs}ms processItems=${timing.processItemsMs}ms dbTxn=${timing.dbTxnMs}ms redis=${timing.redisMs}ms markFailed=${timing.markFailedMs}ms finalizeBatch=${timing.finalizeBatchMs}ms writeMetrics=${timing.writeMetricsMs}ms`,
+      `[CreateBatchTiming] batchId=${batchId} total=${Date.now() - processingStartedAt}ms queueWait=${queueWaitMs}ms items=${totalItems} success=${successCount} fail=${failCount} loadPending=${timing.loadPendingItemsMs}ms loadSections=${timing.loadSectionsMs}ms processItems=${timing.processItemsMs}ms dbTxn=${timing.dbTxnMs}ms redis=${timing.redisMs}ms markFailed=${timing.markFailedMs}ms finalizeBatch=${timing.finalizeBatchMs}ms writeMetrics=${timing.writeMetricsMs}ms`,
     );
   }
 }

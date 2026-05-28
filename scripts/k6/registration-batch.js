@@ -22,8 +22,8 @@ export const options = {
     registration_batch: {
       executor: "ramping-vus",
       stages: [
-        { duration: "30s", target: 600 },
-        { duration: "1m", target: 600 },
+        { duration: "30s", target: 800 },
+        { duration: "1m", target: 800 },
         { duration: "30s", target: 0 },
       ],
       gracefulRampDown: "10s",

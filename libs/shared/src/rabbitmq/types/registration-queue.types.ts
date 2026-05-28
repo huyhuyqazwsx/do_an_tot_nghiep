@@ -5,11 +5,15 @@ export enum RegistrationQueueEvent {
   CANCEL_BATCH_REQUESTED = 'REGISTRATION_CANCEL_BATCH_REQUESTED',
 }
 
-// ─── Job Items ────────────────────────────────────────────────────────────────
-
 /** Item tối thiểu chứa trong batch (dùng cho CANCEL) */
 export type RegistrationBatchJobItem = {
   classSectionId: string;
+};
+
+/** Item cho CANCEL — kèm ID của item đăng ký gốc cần hủy */
+export type CancelRegistrationBatchJobItem = {
+  classSectionId: string;
+  sourceItemId: string;
 };
 
 /** Item đầy đủ thông tin cho CREATE — kèm theo thông tin lịch và môn học */
@@ -42,7 +46,7 @@ export type CancelBatchJobPayload = {
   userId: string;
   semester: string;
   queuedAt: string;
-  items?: RegistrationBatchJobItem[];
+  items?: CancelRegistrationBatchJobItem[];
 };
 
 export type RegistrationBatchJobPayload =

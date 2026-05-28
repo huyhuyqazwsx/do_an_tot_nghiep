@@ -17,6 +17,7 @@ import {
 } from '@app/shared';
 import {
   RegistrationBatchItemStatus,
+  RegistrationBatchStatus,
   RegistrationBatchType,
 } from '@prisma/client';
 import type Redis from 'ioredis';
@@ -216,6 +217,26 @@ export class RegistrationsService {
 
     const batchId = randomUUID();
 
+    // Tạo batch + items trong DB trước khi publish (đảm bảo FK + idempotent)
+    await this.prisma.registrationBatch.create({
+      data: {
+        id: batchId,
+        userId,
+        semester,
+        type: RegistrationBatchType.CREATE,
+        status: RegistrationBatchStatus.PENDING,
+        totalItems: allRows.length,
+        items: {
+          createMany: {
+            data: allRows.map((row) => ({
+              classSectionId: row.id,
+              status: RegistrationBatchItemStatus.PENDING,
+            })),
+          },
+        },
+      },
+    });
+
     const payload: RegistrationBatchJobPayload = {
       type: RegistrationQueueEvent.CREATE_BATCH_REQUESTED,
       batchId,
@@ -356,15 +377,43 @@ export class RegistrationsService {
       RegistrationBatchType.CANCEL,
     );
 
+    // Build sourceItemId map: classSectionId → batch item ID gốc (CREATE SUCCESS)
+    const sourceItemMap = new Map(
+      activeItems.map((item) => [item.classSectionId!, item.id]),
+    );
+
     const batchId = randomUUID();
+
+    // Tạo batch + items trong DB trước khi publish (đảm bảo FK + idempotent)
+    await this.prisma.registrationBatch.create({
+      data: {
+        id: batchId,
+        userId,
+        semester,
+        type: RegistrationBatchType.CANCEL,
+        status: RegistrationBatchStatus.PENDING,
+        totalItems: classSectionIds.length,
+        items: {
+          createMany: {
+            data: classSectionIds.map((classSectionId) => ({
+              classSectionId,
+              status: RegistrationBatchItemStatus.PENDING,
+            })),
+          },
+        },
+      },
+    });
+
     const payload: RegistrationBatchJobPayload = {
       type: RegistrationQueueEvent.CANCEL_BATCH_REQUESTED,
       batchId,
       userId,
       semester,
       queuedAt: new Date().toISOString(),
-      // Huỷ TẤT CẢ row (mọi buổi học) của các mã lớp được chọn
-      items: classSectionIds.map((classSectionId) => ({ classSectionId })),
+      items: classSectionIds.map((classSectionId) => ({
+        classSectionId,
+        sourceItemId: sourceItemMap.get(classSectionId)!,
+      })),
     };
     const publish = await this.publisher.publishToQueue(payload);
 
