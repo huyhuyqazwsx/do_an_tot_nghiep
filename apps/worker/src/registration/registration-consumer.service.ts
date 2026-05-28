@@ -69,6 +69,7 @@ export class RegistrationConsumerService implements OnModuleInit {
                     payload.userId,
                     payload.semester,
                     payload.items,
+                    payload.queuedAt,
                   );
                   break;
 
@@ -78,6 +79,7 @@ export class RegistrationConsumerService implements OnModuleInit {
                     payload.userId,
                     payload.semester,
                     payload.items,
+                    payload.queuedAt,
                   );
                   break;
 

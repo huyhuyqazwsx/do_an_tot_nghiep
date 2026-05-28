@@ -1,32 +1,1003 @@
 studentCode,name,email,password,role,courseYear,department,isActive
-20220001,Nguyễn Văn An,an.nv210001.test@sis.hust.edu.vn,1,STUDENT,2021,CNTT,true
-20220002,Trần Thị Bình,binh.tt210002.test@sis.hust.edu.vn,1,STUDENT,2021,CNTT,true
-20220003,Lê Hoàng Cường,cuong.lh220001.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
-20220004,Phạm Trà My,my.pt230001.test@sis.hust.edu.vn,1,STUDENT,2023,Hệ thống thông tin,true
-20220005,Vũ Minh Đức,duc.vm220005.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
-20220006,Đỗ Thu Hà,ha.dt220006.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
-20220007,Ngô Quang Huy,huy.nq210007.test@sis.hust.edu.vn,1,STUDENT,2021,Khoa học máy tính,true
-20220008,Bùi Khánh Linh,linh.bk230008.test@sis.hust.edu.vn,1,STUDENT,2023,CNTT,true
-20220009,Hoàng Gia Bảo,bao.hg210009.test@sis.hust.edu.vn,1,STUDENT,2021,Kỹ thuật phần mềm,true
-20220010,Phan Ngọc Anh,anh.pn240010.test@sis.hust.edu.vn,1,STUDENT,2024,Hệ thống thông tin,true
-20220011,Trương Hải Nam,nam.th220011.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
-20220012,Đặng Phương Thảo,thao.dp230012.test@sis.hust.edu.vn,1,STUDENT,2023,CNTT,true
-20220013,Nguyễn Đức Long,long.nd210013.test@sis.hust.edu.vn,1,STUDENT,2021,An toàn thông tin,true
-20220014,Trần Minh Châu,chau.tm240014.test@sis.hust.edu.vn,1,STUDENT,2024,Khoa học máy tính,true
-20220015,Lê Tuấn Kiệt,kiet.lt220015.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
-20220016,Phạm Khánh Vy,vy.pk230016.test@sis.hust.edu.vn,1,STUDENT,2023,Kỹ thuật phần mềm,true
-20220017,Võ Thành Đạt,dat.vt210017.test@sis.hust.edu.vn,1,STUDENT,2021,CNTT,true
-20220018,Đinh Mai Phương,phuong.dm240018.test@sis.hust.edu.vn,1,STUDENT,2024,Hệ thống thông tin,true
-20220019,Hồ Anh Tuấn,tuan.ha220019.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
-20220020,Mai Thanh Hằng,hang.mt230020.test@sis.hust.edu.vn,1,STUDENT,2023,An toàn thông tin,true
-20220021,Nguyễn Hoàng Minh,minh.nh210021.test@sis.hust.edu.vn,1,STUDENT,2021,Khoa học máy tính,true
-20220022,Trần Bảo Ngọc,ngoc.tb240022.test@sis.hust.edu.vn,1,STUDENT,2024,CNTT,true
-20220023,Lý Quốc Việt,viet.lq220023.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
-20220024,Đào Minh Khang,khang.dm230024.test@sis.hust.edu.vn,1,STUDENT,2023,Kỹ thuật máy tính,true
-20220025,Phạm Gia Hân,han.pg210025.test@sis.hust.edu.vn,1,STUDENT,2021,Hệ thống thông tin,true
-20220026,Nguyễn Nhật Linh,linh.nn240026.test@sis.hust.edu.vn,1,STUDENT,2024,Khoa học dữ liệu,true
-20220027,Trịnh Công Sơn,son.tc220027.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
-20220028,Đỗ Minh Quân,quan.dm230028.test@sis.hust.edu.vn,1,STUDENT,2023,CNTT,true
-20220029,Hoàng Thu Trang,trang.ht210029.test@sis.hust.edu.vn,1,STUDENT,2021,Kỹ thuật máy tính,true
-20220030,Vũ Hải Yến,yen.vh240030.test@sis.hust.edu.vn,1,STUDENT,2024,Kỹ thuật phần mềm,true
 20225330,Bui Nguyen Huy,huy.bn225330@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225331,Sinh Vien Test 0001,sv20225331.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225332,Sinh Vien Test 0002,sv20225332.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225333,Sinh Vien Test 0003,sv20225333.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225334,Sinh Vien Test 0004,sv20225334.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225335,Sinh Vien Test 0005,sv20225335.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225336,Sinh Vien Test 0006,sv20225336.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225337,Sinh Vien Test 0007,sv20225337.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225338,Sinh Vien Test 0008,sv20225338.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225339,Sinh Vien Test 0009,sv20225339.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225340,Sinh Vien Test 0010,sv20225340.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225341,Sinh Vien Test 0011,sv20225341.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225342,Sinh Vien Test 0012,sv20225342.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225343,Sinh Vien Test 0013,sv20225343.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225344,Sinh Vien Test 0014,sv20225344.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225345,Sinh Vien Test 0015,sv20225345.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225346,Sinh Vien Test 0016,sv20225346.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225347,Sinh Vien Test 0017,sv20225347.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225348,Sinh Vien Test 0018,sv20225348.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225349,Sinh Vien Test 0019,sv20225349.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225350,Sinh Vien Test 0020,sv20225350.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225351,Sinh Vien Test 0021,sv20225351.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225352,Sinh Vien Test 0022,sv20225352.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225353,Sinh Vien Test 0023,sv20225353.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225354,Sinh Vien Test 0024,sv20225354.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225355,Sinh Vien Test 0025,sv20225355.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225356,Sinh Vien Test 0026,sv20225356.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225357,Sinh Vien Test 0027,sv20225357.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225358,Sinh Vien Test 0028,sv20225358.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225359,Sinh Vien Test 0029,sv20225359.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225360,Sinh Vien Test 0030,sv20225360.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225361,Sinh Vien Test 0031,sv20225361.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225362,Sinh Vien Test 0032,sv20225362.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225363,Sinh Vien Test 0033,sv20225363.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225364,Sinh Vien Test 0034,sv20225364.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225365,Sinh Vien Test 0035,sv20225365.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225366,Sinh Vien Test 0036,sv20225366.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225367,Sinh Vien Test 0037,sv20225367.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225368,Sinh Vien Test 0038,sv20225368.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225369,Sinh Vien Test 0039,sv20225369.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225370,Sinh Vien Test 0040,sv20225370.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225371,Sinh Vien Test 0041,sv20225371.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225372,Sinh Vien Test 0042,sv20225372.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225373,Sinh Vien Test 0043,sv20225373.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225374,Sinh Vien Test 0044,sv20225374.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225375,Sinh Vien Test 0045,sv20225375.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225376,Sinh Vien Test 0046,sv20225376.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225377,Sinh Vien Test 0047,sv20225377.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225378,Sinh Vien Test 0048,sv20225378.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225379,Sinh Vien Test 0049,sv20225379.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225380,Sinh Vien Test 0050,sv20225380.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225381,Sinh Vien Test 0051,sv20225381.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225382,Sinh Vien Test 0052,sv20225382.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225383,Sinh Vien Test 0053,sv20225383.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225384,Sinh Vien Test 0054,sv20225384.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225385,Sinh Vien Test 0055,sv20225385.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225386,Sinh Vien Test 0056,sv20225386.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225387,Sinh Vien Test 0057,sv20225387.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225388,Sinh Vien Test 0058,sv20225388.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225389,Sinh Vien Test 0059,sv20225389.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225390,Sinh Vien Test 0060,sv20225390.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225391,Sinh Vien Test 0061,sv20225391.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225392,Sinh Vien Test 0062,sv20225392.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225393,Sinh Vien Test 0063,sv20225393.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225394,Sinh Vien Test 0064,sv20225394.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225395,Sinh Vien Test 0065,sv20225395.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225396,Sinh Vien Test 0066,sv20225396.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225397,Sinh Vien Test 0067,sv20225397.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225398,Sinh Vien Test 0068,sv20225398.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225399,Sinh Vien Test 0069,sv20225399.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225400,Sinh Vien Test 0070,sv20225400.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225401,Sinh Vien Test 0071,sv20225401.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225402,Sinh Vien Test 0072,sv20225402.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225403,Sinh Vien Test 0073,sv20225403.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225404,Sinh Vien Test 0074,sv20225404.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225405,Sinh Vien Test 0075,sv20225405.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225406,Sinh Vien Test 0076,sv20225406.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225407,Sinh Vien Test 0077,sv20225407.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225408,Sinh Vien Test 0078,sv20225408.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225409,Sinh Vien Test 0079,sv20225409.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225410,Sinh Vien Test 0080,sv20225410.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225411,Sinh Vien Test 0081,sv20225411.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225412,Sinh Vien Test 0082,sv20225412.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225413,Sinh Vien Test 0083,sv20225413.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225414,Sinh Vien Test 0084,sv20225414.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225415,Sinh Vien Test 0085,sv20225415.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225416,Sinh Vien Test 0086,sv20225416.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225417,Sinh Vien Test 0087,sv20225417.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225418,Sinh Vien Test 0088,sv20225418.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225419,Sinh Vien Test 0089,sv20225419.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225420,Sinh Vien Test 0090,sv20225420.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225421,Sinh Vien Test 0091,sv20225421.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225422,Sinh Vien Test 0092,sv20225422.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225423,Sinh Vien Test 0093,sv20225423.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225424,Sinh Vien Test 0094,sv20225424.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225425,Sinh Vien Test 0095,sv20225425.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225426,Sinh Vien Test 0096,sv20225426.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225427,Sinh Vien Test 0097,sv20225427.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225428,Sinh Vien Test 0098,sv20225428.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225429,Sinh Vien Test 0099,sv20225429.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225430,Sinh Vien Test 0100,sv20225430.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225431,Sinh Vien Test 0101,sv20225431.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225432,Sinh Vien Test 0102,sv20225432.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225433,Sinh Vien Test 0103,sv20225433.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225434,Sinh Vien Test 0104,sv20225434.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225435,Sinh Vien Test 0105,sv20225435.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225436,Sinh Vien Test 0106,sv20225436.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225437,Sinh Vien Test 0107,sv20225437.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225438,Sinh Vien Test 0108,sv20225438.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225439,Sinh Vien Test 0109,sv20225439.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225440,Sinh Vien Test 0110,sv20225440.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225441,Sinh Vien Test 0111,sv20225441.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225442,Sinh Vien Test 0112,sv20225442.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225443,Sinh Vien Test 0113,sv20225443.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225444,Sinh Vien Test 0114,sv20225444.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225445,Sinh Vien Test 0115,sv20225445.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225446,Sinh Vien Test 0116,sv20225446.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225447,Sinh Vien Test 0117,sv20225447.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225448,Sinh Vien Test 0118,sv20225448.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225449,Sinh Vien Test 0119,sv20225449.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225450,Sinh Vien Test 0120,sv20225450.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225451,Sinh Vien Test 0121,sv20225451.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225452,Sinh Vien Test 0122,sv20225452.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225453,Sinh Vien Test 0123,sv20225453.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225454,Sinh Vien Test 0124,sv20225454.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225455,Sinh Vien Test 0125,sv20225455.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225456,Sinh Vien Test 0126,sv20225456.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225457,Sinh Vien Test 0127,sv20225457.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225458,Sinh Vien Test 0128,sv20225458.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225459,Sinh Vien Test 0129,sv20225459.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225460,Sinh Vien Test 0130,sv20225460.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225461,Sinh Vien Test 0131,sv20225461.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225462,Sinh Vien Test 0132,sv20225462.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225463,Sinh Vien Test 0133,sv20225463.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225464,Sinh Vien Test 0134,sv20225464.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225465,Sinh Vien Test 0135,sv20225465.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225466,Sinh Vien Test 0136,sv20225466.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225467,Sinh Vien Test 0137,sv20225467.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225468,Sinh Vien Test 0138,sv20225468.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225469,Sinh Vien Test 0139,sv20225469.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225470,Sinh Vien Test 0140,sv20225470.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225471,Sinh Vien Test 0141,sv20225471.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225472,Sinh Vien Test 0142,sv20225472.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225473,Sinh Vien Test 0143,sv20225473.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225474,Sinh Vien Test 0144,sv20225474.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225475,Sinh Vien Test 0145,sv20225475.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225476,Sinh Vien Test 0146,sv20225476.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225477,Sinh Vien Test 0147,sv20225477.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225478,Sinh Vien Test 0148,sv20225478.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225479,Sinh Vien Test 0149,sv20225479.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225480,Sinh Vien Test 0150,sv20225480.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225481,Sinh Vien Test 0151,sv20225481.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225482,Sinh Vien Test 0152,sv20225482.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225483,Sinh Vien Test 0153,sv20225483.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225484,Sinh Vien Test 0154,sv20225484.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225485,Sinh Vien Test 0155,sv20225485.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225486,Sinh Vien Test 0156,sv20225486.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225487,Sinh Vien Test 0157,sv20225487.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225488,Sinh Vien Test 0158,sv20225488.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225489,Sinh Vien Test 0159,sv20225489.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225490,Sinh Vien Test 0160,sv20225490.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225491,Sinh Vien Test 0161,sv20225491.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225492,Sinh Vien Test 0162,sv20225492.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225493,Sinh Vien Test 0163,sv20225493.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225494,Sinh Vien Test 0164,sv20225494.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225495,Sinh Vien Test 0165,sv20225495.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225496,Sinh Vien Test 0166,sv20225496.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225497,Sinh Vien Test 0167,sv20225497.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225498,Sinh Vien Test 0168,sv20225498.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225499,Sinh Vien Test 0169,sv20225499.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225500,Sinh Vien Test 0170,sv20225500.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225501,Sinh Vien Test 0171,sv20225501.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225502,Sinh Vien Test 0172,sv20225502.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225503,Sinh Vien Test 0173,sv20225503.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225504,Sinh Vien Test 0174,sv20225504.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225505,Sinh Vien Test 0175,sv20225505.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225506,Sinh Vien Test 0176,sv20225506.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225507,Sinh Vien Test 0177,sv20225507.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225508,Sinh Vien Test 0178,sv20225508.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225509,Sinh Vien Test 0179,sv20225509.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225510,Sinh Vien Test 0180,sv20225510.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225511,Sinh Vien Test 0181,sv20225511.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225512,Sinh Vien Test 0182,sv20225512.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225513,Sinh Vien Test 0183,sv20225513.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225514,Sinh Vien Test 0184,sv20225514.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225515,Sinh Vien Test 0185,sv20225515.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225516,Sinh Vien Test 0186,sv20225516.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225517,Sinh Vien Test 0187,sv20225517.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225518,Sinh Vien Test 0188,sv20225518.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225519,Sinh Vien Test 0189,sv20225519.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225520,Sinh Vien Test 0190,sv20225520.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225521,Sinh Vien Test 0191,sv20225521.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225522,Sinh Vien Test 0192,sv20225522.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225523,Sinh Vien Test 0193,sv20225523.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225524,Sinh Vien Test 0194,sv20225524.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225525,Sinh Vien Test 0195,sv20225525.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225526,Sinh Vien Test 0196,sv20225526.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225527,Sinh Vien Test 0197,sv20225527.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225528,Sinh Vien Test 0198,sv20225528.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225529,Sinh Vien Test 0199,sv20225529.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225530,Sinh Vien Test 0200,sv20225530.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225531,Sinh Vien Test 0201,sv20225531.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225532,Sinh Vien Test 0202,sv20225532.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225533,Sinh Vien Test 0203,sv20225533.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225534,Sinh Vien Test 0204,sv20225534.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225535,Sinh Vien Test 0205,sv20225535.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225536,Sinh Vien Test 0206,sv20225536.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225537,Sinh Vien Test 0207,sv20225537.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225538,Sinh Vien Test 0208,sv20225538.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225539,Sinh Vien Test 0209,sv20225539.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225540,Sinh Vien Test 0210,sv20225540.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225541,Sinh Vien Test 0211,sv20225541.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225542,Sinh Vien Test 0212,sv20225542.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225543,Sinh Vien Test 0213,sv20225543.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225544,Sinh Vien Test 0214,sv20225544.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225545,Sinh Vien Test 0215,sv20225545.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225546,Sinh Vien Test 0216,sv20225546.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225547,Sinh Vien Test 0217,sv20225547.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225548,Sinh Vien Test 0218,sv20225548.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225549,Sinh Vien Test 0219,sv20225549.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225550,Sinh Vien Test 0220,sv20225550.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225551,Sinh Vien Test 0221,sv20225551.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225552,Sinh Vien Test 0222,sv20225552.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225553,Sinh Vien Test 0223,sv20225553.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225554,Sinh Vien Test 0224,sv20225554.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225555,Sinh Vien Test 0225,sv20225555.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225556,Sinh Vien Test 0226,sv20225556.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225557,Sinh Vien Test 0227,sv20225557.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225558,Sinh Vien Test 0228,sv20225558.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225559,Sinh Vien Test 0229,sv20225559.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225560,Sinh Vien Test 0230,sv20225560.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225561,Sinh Vien Test 0231,sv20225561.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225562,Sinh Vien Test 0232,sv20225562.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225563,Sinh Vien Test 0233,sv20225563.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225564,Sinh Vien Test 0234,sv20225564.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225565,Sinh Vien Test 0235,sv20225565.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225566,Sinh Vien Test 0236,sv20225566.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225567,Sinh Vien Test 0237,sv20225567.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225568,Sinh Vien Test 0238,sv20225568.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225569,Sinh Vien Test 0239,sv20225569.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225570,Sinh Vien Test 0240,sv20225570.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225571,Sinh Vien Test 0241,sv20225571.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225572,Sinh Vien Test 0242,sv20225572.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225573,Sinh Vien Test 0243,sv20225573.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225574,Sinh Vien Test 0244,sv20225574.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225575,Sinh Vien Test 0245,sv20225575.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225576,Sinh Vien Test 0246,sv20225576.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225577,Sinh Vien Test 0247,sv20225577.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225578,Sinh Vien Test 0248,sv20225578.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225579,Sinh Vien Test 0249,sv20225579.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225580,Sinh Vien Test 0250,sv20225580.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225581,Sinh Vien Test 0251,sv20225581.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225582,Sinh Vien Test 0252,sv20225582.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225583,Sinh Vien Test 0253,sv20225583.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225584,Sinh Vien Test 0254,sv20225584.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225585,Sinh Vien Test 0255,sv20225585.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225586,Sinh Vien Test 0256,sv20225586.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225587,Sinh Vien Test 0257,sv20225587.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225588,Sinh Vien Test 0258,sv20225588.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225589,Sinh Vien Test 0259,sv20225589.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225590,Sinh Vien Test 0260,sv20225590.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225591,Sinh Vien Test 0261,sv20225591.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225592,Sinh Vien Test 0262,sv20225592.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225593,Sinh Vien Test 0263,sv20225593.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225594,Sinh Vien Test 0264,sv20225594.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225595,Sinh Vien Test 0265,sv20225595.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225596,Sinh Vien Test 0266,sv20225596.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225597,Sinh Vien Test 0267,sv20225597.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225598,Sinh Vien Test 0268,sv20225598.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225599,Sinh Vien Test 0269,sv20225599.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225600,Sinh Vien Test 0270,sv20225600.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225601,Sinh Vien Test 0271,sv20225601.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225602,Sinh Vien Test 0272,sv20225602.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225603,Sinh Vien Test 0273,sv20225603.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225604,Sinh Vien Test 0274,sv20225604.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225605,Sinh Vien Test 0275,sv20225605.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225606,Sinh Vien Test 0276,sv20225606.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225607,Sinh Vien Test 0277,sv20225607.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225608,Sinh Vien Test 0278,sv20225608.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225609,Sinh Vien Test 0279,sv20225609.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225610,Sinh Vien Test 0280,sv20225610.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225611,Sinh Vien Test 0281,sv20225611.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225612,Sinh Vien Test 0282,sv20225612.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225613,Sinh Vien Test 0283,sv20225613.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225614,Sinh Vien Test 0284,sv20225614.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225615,Sinh Vien Test 0285,sv20225615.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225616,Sinh Vien Test 0286,sv20225616.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225617,Sinh Vien Test 0287,sv20225617.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225618,Sinh Vien Test 0288,sv20225618.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225619,Sinh Vien Test 0289,sv20225619.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225620,Sinh Vien Test 0290,sv20225620.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225621,Sinh Vien Test 0291,sv20225621.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225622,Sinh Vien Test 0292,sv20225622.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225623,Sinh Vien Test 0293,sv20225623.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225624,Sinh Vien Test 0294,sv20225624.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225625,Sinh Vien Test 0295,sv20225625.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225626,Sinh Vien Test 0296,sv20225626.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225627,Sinh Vien Test 0297,sv20225627.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225628,Sinh Vien Test 0298,sv20225628.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225629,Sinh Vien Test 0299,sv20225629.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225630,Sinh Vien Test 0300,sv20225630.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225631,Sinh Vien Test 0301,sv20225631.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225632,Sinh Vien Test 0302,sv20225632.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225633,Sinh Vien Test 0303,sv20225633.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225634,Sinh Vien Test 0304,sv20225634.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225635,Sinh Vien Test 0305,sv20225635.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225636,Sinh Vien Test 0306,sv20225636.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225637,Sinh Vien Test 0307,sv20225637.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225638,Sinh Vien Test 0308,sv20225638.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225639,Sinh Vien Test 0309,sv20225639.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225640,Sinh Vien Test 0310,sv20225640.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225641,Sinh Vien Test 0311,sv20225641.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225642,Sinh Vien Test 0312,sv20225642.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225643,Sinh Vien Test 0313,sv20225643.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225644,Sinh Vien Test 0314,sv20225644.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225645,Sinh Vien Test 0315,sv20225645.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225646,Sinh Vien Test 0316,sv20225646.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225647,Sinh Vien Test 0317,sv20225647.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225648,Sinh Vien Test 0318,sv20225648.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225649,Sinh Vien Test 0319,sv20225649.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225650,Sinh Vien Test 0320,sv20225650.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225651,Sinh Vien Test 0321,sv20225651.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225652,Sinh Vien Test 0322,sv20225652.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225653,Sinh Vien Test 0323,sv20225653.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225654,Sinh Vien Test 0324,sv20225654.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225655,Sinh Vien Test 0325,sv20225655.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225656,Sinh Vien Test 0326,sv20225656.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225657,Sinh Vien Test 0327,sv20225657.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225658,Sinh Vien Test 0328,sv20225658.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225659,Sinh Vien Test 0329,sv20225659.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225660,Sinh Vien Test 0330,sv20225660.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225661,Sinh Vien Test 0331,sv20225661.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225662,Sinh Vien Test 0332,sv20225662.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225663,Sinh Vien Test 0333,sv20225663.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225664,Sinh Vien Test 0334,sv20225664.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225665,Sinh Vien Test 0335,sv20225665.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225666,Sinh Vien Test 0336,sv20225666.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225667,Sinh Vien Test 0337,sv20225667.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225668,Sinh Vien Test 0338,sv20225668.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225669,Sinh Vien Test 0339,sv20225669.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225670,Sinh Vien Test 0340,sv20225670.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225671,Sinh Vien Test 0341,sv20225671.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225672,Sinh Vien Test 0342,sv20225672.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225673,Sinh Vien Test 0343,sv20225673.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225674,Sinh Vien Test 0344,sv20225674.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225675,Sinh Vien Test 0345,sv20225675.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225676,Sinh Vien Test 0346,sv20225676.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225677,Sinh Vien Test 0347,sv20225677.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225678,Sinh Vien Test 0348,sv20225678.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225679,Sinh Vien Test 0349,sv20225679.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225680,Sinh Vien Test 0350,sv20225680.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225681,Sinh Vien Test 0351,sv20225681.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225682,Sinh Vien Test 0352,sv20225682.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225683,Sinh Vien Test 0353,sv20225683.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225684,Sinh Vien Test 0354,sv20225684.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225685,Sinh Vien Test 0355,sv20225685.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225686,Sinh Vien Test 0356,sv20225686.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225687,Sinh Vien Test 0357,sv20225687.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225688,Sinh Vien Test 0358,sv20225688.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225689,Sinh Vien Test 0359,sv20225689.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225690,Sinh Vien Test 0360,sv20225690.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225691,Sinh Vien Test 0361,sv20225691.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225692,Sinh Vien Test 0362,sv20225692.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225693,Sinh Vien Test 0363,sv20225693.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225694,Sinh Vien Test 0364,sv20225694.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225695,Sinh Vien Test 0365,sv20225695.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225696,Sinh Vien Test 0366,sv20225696.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225697,Sinh Vien Test 0367,sv20225697.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225698,Sinh Vien Test 0368,sv20225698.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225699,Sinh Vien Test 0369,sv20225699.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225700,Sinh Vien Test 0370,sv20225700.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225701,Sinh Vien Test 0371,sv20225701.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225702,Sinh Vien Test 0372,sv20225702.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225703,Sinh Vien Test 0373,sv20225703.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225704,Sinh Vien Test 0374,sv20225704.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225705,Sinh Vien Test 0375,sv20225705.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225706,Sinh Vien Test 0376,sv20225706.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225707,Sinh Vien Test 0377,sv20225707.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225708,Sinh Vien Test 0378,sv20225708.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225709,Sinh Vien Test 0379,sv20225709.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225710,Sinh Vien Test 0380,sv20225710.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225711,Sinh Vien Test 0381,sv20225711.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225712,Sinh Vien Test 0382,sv20225712.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225713,Sinh Vien Test 0383,sv20225713.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225714,Sinh Vien Test 0384,sv20225714.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225715,Sinh Vien Test 0385,sv20225715.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225716,Sinh Vien Test 0386,sv20225716.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225717,Sinh Vien Test 0387,sv20225717.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225718,Sinh Vien Test 0388,sv20225718.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225719,Sinh Vien Test 0389,sv20225719.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225720,Sinh Vien Test 0390,sv20225720.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225721,Sinh Vien Test 0391,sv20225721.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225722,Sinh Vien Test 0392,sv20225722.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225723,Sinh Vien Test 0393,sv20225723.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225724,Sinh Vien Test 0394,sv20225724.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225725,Sinh Vien Test 0395,sv20225725.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225726,Sinh Vien Test 0396,sv20225726.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225727,Sinh Vien Test 0397,sv20225727.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225728,Sinh Vien Test 0398,sv20225728.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225729,Sinh Vien Test 0399,sv20225729.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225730,Sinh Vien Test 0400,sv20225730.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225731,Sinh Vien Test 0401,sv20225731.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225732,Sinh Vien Test 0402,sv20225732.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225733,Sinh Vien Test 0403,sv20225733.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225734,Sinh Vien Test 0404,sv20225734.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225735,Sinh Vien Test 0405,sv20225735.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225736,Sinh Vien Test 0406,sv20225736.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225737,Sinh Vien Test 0407,sv20225737.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225738,Sinh Vien Test 0408,sv20225738.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225739,Sinh Vien Test 0409,sv20225739.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225740,Sinh Vien Test 0410,sv20225740.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225741,Sinh Vien Test 0411,sv20225741.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225742,Sinh Vien Test 0412,sv20225742.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225743,Sinh Vien Test 0413,sv20225743.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225744,Sinh Vien Test 0414,sv20225744.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225745,Sinh Vien Test 0415,sv20225745.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225746,Sinh Vien Test 0416,sv20225746.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225747,Sinh Vien Test 0417,sv20225747.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225748,Sinh Vien Test 0418,sv20225748.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225749,Sinh Vien Test 0419,sv20225749.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225750,Sinh Vien Test 0420,sv20225750.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225751,Sinh Vien Test 0421,sv20225751.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225752,Sinh Vien Test 0422,sv20225752.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225753,Sinh Vien Test 0423,sv20225753.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225754,Sinh Vien Test 0424,sv20225754.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225755,Sinh Vien Test 0425,sv20225755.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225756,Sinh Vien Test 0426,sv20225756.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225757,Sinh Vien Test 0427,sv20225757.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225758,Sinh Vien Test 0428,sv20225758.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225759,Sinh Vien Test 0429,sv20225759.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225760,Sinh Vien Test 0430,sv20225760.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225761,Sinh Vien Test 0431,sv20225761.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225762,Sinh Vien Test 0432,sv20225762.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225763,Sinh Vien Test 0433,sv20225763.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225764,Sinh Vien Test 0434,sv20225764.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225765,Sinh Vien Test 0435,sv20225765.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225766,Sinh Vien Test 0436,sv20225766.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225767,Sinh Vien Test 0437,sv20225767.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225768,Sinh Vien Test 0438,sv20225768.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225769,Sinh Vien Test 0439,sv20225769.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225770,Sinh Vien Test 0440,sv20225770.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225771,Sinh Vien Test 0441,sv20225771.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225772,Sinh Vien Test 0442,sv20225772.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225773,Sinh Vien Test 0443,sv20225773.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225774,Sinh Vien Test 0444,sv20225774.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225775,Sinh Vien Test 0445,sv20225775.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225776,Sinh Vien Test 0446,sv20225776.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225777,Sinh Vien Test 0447,sv20225777.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225778,Sinh Vien Test 0448,sv20225778.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225779,Sinh Vien Test 0449,sv20225779.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225780,Sinh Vien Test 0450,sv20225780.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225781,Sinh Vien Test 0451,sv20225781.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225782,Sinh Vien Test 0452,sv20225782.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225783,Sinh Vien Test 0453,sv20225783.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225784,Sinh Vien Test 0454,sv20225784.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225785,Sinh Vien Test 0455,sv20225785.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225786,Sinh Vien Test 0456,sv20225786.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225787,Sinh Vien Test 0457,sv20225787.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225788,Sinh Vien Test 0458,sv20225788.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225789,Sinh Vien Test 0459,sv20225789.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225790,Sinh Vien Test 0460,sv20225790.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225791,Sinh Vien Test 0461,sv20225791.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225792,Sinh Vien Test 0462,sv20225792.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225793,Sinh Vien Test 0463,sv20225793.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225794,Sinh Vien Test 0464,sv20225794.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225795,Sinh Vien Test 0465,sv20225795.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225796,Sinh Vien Test 0466,sv20225796.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225797,Sinh Vien Test 0467,sv20225797.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225798,Sinh Vien Test 0468,sv20225798.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225799,Sinh Vien Test 0469,sv20225799.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225800,Sinh Vien Test 0470,sv20225800.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225801,Sinh Vien Test 0471,sv20225801.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225802,Sinh Vien Test 0472,sv20225802.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225803,Sinh Vien Test 0473,sv20225803.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225804,Sinh Vien Test 0474,sv20225804.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225805,Sinh Vien Test 0475,sv20225805.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225806,Sinh Vien Test 0476,sv20225806.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225807,Sinh Vien Test 0477,sv20225807.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225808,Sinh Vien Test 0478,sv20225808.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225809,Sinh Vien Test 0479,sv20225809.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225810,Sinh Vien Test 0480,sv20225810.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225811,Sinh Vien Test 0481,sv20225811.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225812,Sinh Vien Test 0482,sv20225812.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225813,Sinh Vien Test 0483,sv20225813.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225814,Sinh Vien Test 0484,sv20225814.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225815,Sinh Vien Test 0485,sv20225815.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225816,Sinh Vien Test 0486,sv20225816.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225817,Sinh Vien Test 0487,sv20225817.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225818,Sinh Vien Test 0488,sv20225818.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225819,Sinh Vien Test 0489,sv20225819.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225820,Sinh Vien Test 0490,sv20225820.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225821,Sinh Vien Test 0491,sv20225821.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225822,Sinh Vien Test 0492,sv20225822.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225823,Sinh Vien Test 0493,sv20225823.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225824,Sinh Vien Test 0494,sv20225824.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225825,Sinh Vien Test 0495,sv20225825.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225826,Sinh Vien Test 0496,sv20225826.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225827,Sinh Vien Test 0497,sv20225827.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225828,Sinh Vien Test 0498,sv20225828.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225829,Sinh Vien Test 0499,sv20225829.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225830,Sinh Vien Test 0500,sv20225830.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225831,Sinh Vien Test 0501,sv20225831.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225832,Sinh Vien Test 0502,sv20225832.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225833,Sinh Vien Test 0503,sv20225833.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225834,Sinh Vien Test 0504,sv20225834.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225835,Sinh Vien Test 0505,sv20225835.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225836,Sinh Vien Test 0506,sv20225836.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225837,Sinh Vien Test 0507,sv20225837.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225838,Sinh Vien Test 0508,sv20225838.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225839,Sinh Vien Test 0509,sv20225839.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225840,Sinh Vien Test 0510,sv20225840.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225841,Sinh Vien Test 0511,sv20225841.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225842,Sinh Vien Test 0512,sv20225842.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225843,Sinh Vien Test 0513,sv20225843.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225844,Sinh Vien Test 0514,sv20225844.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225845,Sinh Vien Test 0515,sv20225845.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225846,Sinh Vien Test 0516,sv20225846.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225847,Sinh Vien Test 0517,sv20225847.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225848,Sinh Vien Test 0518,sv20225848.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225849,Sinh Vien Test 0519,sv20225849.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225850,Sinh Vien Test 0520,sv20225850.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225851,Sinh Vien Test 0521,sv20225851.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225852,Sinh Vien Test 0522,sv20225852.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225853,Sinh Vien Test 0523,sv20225853.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225854,Sinh Vien Test 0524,sv20225854.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225855,Sinh Vien Test 0525,sv20225855.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225856,Sinh Vien Test 0526,sv20225856.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225857,Sinh Vien Test 0527,sv20225857.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225858,Sinh Vien Test 0528,sv20225858.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225859,Sinh Vien Test 0529,sv20225859.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225860,Sinh Vien Test 0530,sv20225860.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225861,Sinh Vien Test 0531,sv20225861.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225862,Sinh Vien Test 0532,sv20225862.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225863,Sinh Vien Test 0533,sv20225863.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225864,Sinh Vien Test 0534,sv20225864.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225865,Sinh Vien Test 0535,sv20225865.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225866,Sinh Vien Test 0536,sv20225866.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225867,Sinh Vien Test 0537,sv20225867.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225868,Sinh Vien Test 0538,sv20225868.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225869,Sinh Vien Test 0539,sv20225869.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225870,Sinh Vien Test 0540,sv20225870.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225871,Sinh Vien Test 0541,sv20225871.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225872,Sinh Vien Test 0542,sv20225872.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225873,Sinh Vien Test 0543,sv20225873.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225874,Sinh Vien Test 0544,sv20225874.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225875,Sinh Vien Test 0545,sv20225875.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225876,Sinh Vien Test 0546,sv20225876.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225877,Sinh Vien Test 0547,sv20225877.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225878,Sinh Vien Test 0548,sv20225878.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225879,Sinh Vien Test 0549,sv20225879.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225880,Sinh Vien Test 0550,sv20225880.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225881,Sinh Vien Test 0551,sv20225881.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225882,Sinh Vien Test 0552,sv20225882.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225883,Sinh Vien Test 0553,sv20225883.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225884,Sinh Vien Test 0554,sv20225884.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225885,Sinh Vien Test 0555,sv20225885.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225886,Sinh Vien Test 0556,sv20225886.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225887,Sinh Vien Test 0557,sv20225887.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225888,Sinh Vien Test 0558,sv20225888.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225889,Sinh Vien Test 0559,sv20225889.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225890,Sinh Vien Test 0560,sv20225890.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225891,Sinh Vien Test 0561,sv20225891.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225892,Sinh Vien Test 0562,sv20225892.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225893,Sinh Vien Test 0563,sv20225893.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225894,Sinh Vien Test 0564,sv20225894.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225895,Sinh Vien Test 0565,sv20225895.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225896,Sinh Vien Test 0566,sv20225896.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225897,Sinh Vien Test 0567,sv20225897.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225898,Sinh Vien Test 0568,sv20225898.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225899,Sinh Vien Test 0569,sv20225899.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225900,Sinh Vien Test 0570,sv20225900.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225901,Sinh Vien Test 0571,sv20225901.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225902,Sinh Vien Test 0572,sv20225902.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225903,Sinh Vien Test 0573,sv20225903.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225904,Sinh Vien Test 0574,sv20225904.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225905,Sinh Vien Test 0575,sv20225905.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225906,Sinh Vien Test 0576,sv20225906.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225907,Sinh Vien Test 0577,sv20225907.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225908,Sinh Vien Test 0578,sv20225908.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225909,Sinh Vien Test 0579,sv20225909.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225910,Sinh Vien Test 0580,sv20225910.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225911,Sinh Vien Test 0581,sv20225911.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225912,Sinh Vien Test 0582,sv20225912.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225913,Sinh Vien Test 0583,sv20225913.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225914,Sinh Vien Test 0584,sv20225914.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225915,Sinh Vien Test 0585,sv20225915.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225916,Sinh Vien Test 0586,sv20225916.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225917,Sinh Vien Test 0587,sv20225917.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225918,Sinh Vien Test 0588,sv20225918.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225919,Sinh Vien Test 0589,sv20225919.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225920,Sinh Vien Test 0590,sv20225920.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225921,Sinh Vien Test 0591,sv20225921.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225922,Sinh Vien Test 0592,sv20225922.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225923,Sinh Vien Test 0593,sv20225923.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225924,Sinh Vien Test 0594,sv20225924.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225925,Sinh Vien Test 0595,sv20225925.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225926,Sinh Vien Test 0596,sv20225926.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225927,Sinh Vien Test 0597,sv20225927.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225928,Sinh Vien Test 0598,sv20225928.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225929,Sinh Vien Test 0599,sv20225929.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225930,Sinh Vien Test 0600,sv20225930.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225931,Sinh Vien Test 0601,sv20225931.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225932,Sinh Vien Test 0602,sv20225932.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225933,Sinh Vien Test 0603,sv20225933.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225934,Sinh Vien Test 0604,sv20225934.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225935,Sinh Vien Test 0605,sv20225935.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225936,Sinh Vien Test 0606,sv20225936.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225937,Sinh Vien Test 0607,sv20225937.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225938,Sinh Vien Test 0608,sv20225938.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225939,Sinh Vien Test 0609,sv20225939.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225940,Sinh Vien Test 0610,sv20225940.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225941,Sinh Vien Test 0611,sv20225941.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225942,Sinh Vien Test 0612,sv20225942.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225943,Sinh Vien Test 0613,sv20225943.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225944,Sinh Vien Test 0614,sv20225944.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225945,Sinh Vien Test 0615,sv20225945.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225946,Sinh Vien Test 0616,sv20225946.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225947,Sinh Vien Test 0617,sv20225947.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225948,Sinh Vien Test 0618,sv20225948.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225949,Sinh Vien Test 0619,sv20225949.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225950,Sinh Vien Test 0620,sv20225950.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225951,Sinh Vien Test 0621,sv20225951.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225952,Sinh Vien Test 0622,sv20225952.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225953,Sinh Vien Test 0623,sv20225953.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225954,Sinh Vien Test 0624,sv20225954.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225955,Sinh Vien Test 0625,sv20225955.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225956,Sinh Vien Test 0626,sv20225956.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225957,Sinh Vien Test 0627,sv20225957.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225958,Sinh Vien Test 0628,sv20225958.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225959,Sinh Vien Test 0629,sv20225959.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225960,Sinh Vien Test 0630,sv20225960.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225961,Sinh Vien Test 0631,sv20225961.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225962,Sinh Vien Test 0632,sv20225962.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225963,Sinh Vien Test 0633,sv20225963.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225964,Sinh Vien Test 0634,sv20225964.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225965,Sinh Vien Test 0635,sv20225965.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225966,Sinh Vien Test 0636,sv20225966.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225967,Sinh Vien Test 0637,sv20225967.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225968,Sinh Vien Test 0638,sv20225968.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225969,Sinh Vien Test 0639,sv20225969.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225970,Sinh Vien Test 0640,sv20225970.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225971,Sinh Vien Test 0641,sv20225971.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225972,Sinh Vien Test 0642,sv20225972.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225973,Sinh Vien Test 0643,sv20225973.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225974,Sinh Vien Test 0644,sv20225974.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225975,Sinh Vien Test 0645,sv20225975.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225976,Sinh Vien Test 0646,sv20225976.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225977,Sinh Vien Test 0647,sv20225977.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225978,Sinh Vien Test 0648,sv20225978.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225979,Sinh Vien Test 0649,sv20225979.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225980,Sinh Vien Test 0650,sv20225980.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225981,Sinh Vien Test 0651,sv20225981.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225982,Sinh Vien Test 0652,sv20225982.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225983,Sinh Vien Test 0653,sv20225983.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225984,Sinh Vien Test 0654,sv20225984.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225985,Sinh Vien Test 0655,sv20225985.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225986,Sinh Vien Test 0656,sv20225986.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225987,Sinh Vien Test 0657,sv20225987.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225988,Sinh Vien Test 0658,sv20225988.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225989,Sinh Vien Test 0659,sv20225989.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225990,Sinh Vien Test 0660,sv20225990.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225991,Sinh Vien Test 0661,sv20225991.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225992,Sinh Vien Test 0662,sv20225992.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20225993,Sinh Vien Test 0663,sv20225993.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20225994,Sinh Vien Test 0664,sv20225994.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20225995,Sinh Vien Test 0665,sv20225995.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20225996,Sinh Vien Test 0666,sv20225996.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20225997,Sinh Vien Test 0667,sv20225997.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20225998,Sinh Vien Test 0668,sv20225998.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20225999,Sinh Vien Test 0669,sv20225999.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226000,Sinh Vien Test 0670,sv20226000.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226001,Sinh Vien Test 0671,sv20226001.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226002,Sinh Vien Test 0672,sv20226002.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226003,Sinh Vien Test 0673,sv20226003.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226004,Sinh Vien Test 0674,sv20226004.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226005,Sinh Vien Test 0675,sv20226005.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226006,Sinh Vien Test 0676,sv20226006.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226007,Sinh Vien Test 0677,sv20226007.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226008,Sinh Vien Test 0678,sv20226008.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226009,Sinh Vien Test 0679,sv20226009.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226010,Sinh Vien Test 0680,sv20226010.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226011,Sinh Vien Test 0681,sv20226011.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226012,Sinh Vien Test 0682,sv20226012.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226013,Sinh Vien Test 0683,sv20226013.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226014,Sinh Vien Test 0684,sv20226014.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226015,Sinh Vien Test 0685,sv20226015.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226016,Sinh Vien Test 0686,sv20226016.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226017,Sinh Vien Test 0687,sv20226017.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226018,Sinh Vien Test 0688,sv20226018.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226019,Sinh Vien Test 0689,sv20226019.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226020,Sinh Vien Test 0690,sv20226020.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226021,Sinh Vien Test 0691,sv20226021.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226022,Sinh Vien Test 0692,sv20226022.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226023,Sinh Vien Test 0693,sv20226023.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226024,Sinh Vien Test 0694,sv20226024.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226025,Sinh Vien Test 0695,sv20226025.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226026,Sinh Vien Test 0696,sv20226026.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226027,Sinh Vien Test 0697,sv20226027.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226028,Sinh Vien Test 0698,sv20226028.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226029,Sinh Vien Test 0699,sv20226029.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226030,Sinh Vien Test 0700,sv20226030.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226031,Sinh Vien Test 0701,sv20226031.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226032,Sinh Vien Test 0702,sv20226032.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226033,Sinh Vien Test 0703,sv20226033.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226034,Sinh Vien Test 0704,sv20226034.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226035,Sinh Vien Test 0705,sv20226035.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226036,Sinh Vien Test 0706,sv20226036.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226037,Sinh Vien Test 0707,sv20226037.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226038,Sinh Vien Test 0708,sv20226038.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226039,Sinh Vien Test 0709,sv20226039.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226040,Sinh Vien Test 0710,sv20226040.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226041,Sinh Vien Test 0711,sv20226041.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226042,Sinh Vien Test 0712,sv20226042.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226043,Sinh Vien Test 0713,sv20226043.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226044,Sinh Vien Test 0714,sv20226044.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226045,Sinh Vien Test 0715,sv20226045.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226046,Sinh Vien Test 0716,sv20226046.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226047,Sinh Vien Test 0717,sv20226047.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226048,Sinh Vien Test 0718,sv20226048.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226049,Sinh Vien Test 0719,sv20226049.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226050,Sinh Vien Test 0720,sv20226050.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226051,Sinh Vien Test 0721,sv20226051.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226052,Sinh Vien Test 0722,sv20226052.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226053,Sinh Vien Test 0723,sv20226053.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226054,Sinh Vien Test 0724,sv20226054.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226055,Sinh Vien Test 0725,sv20226055.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226056,Sinh Vien Test 0726,sv20226056.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226057,Sinh Vien Test 0727,sv20226057.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226058,Sinh Vien Test 0728,sv20226058.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226059,Sinh Vien Test 0729,sv20226059.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226060,Sinh Vien Test 0730,sv20226060.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226061,Sinh Vien Test 0731,sv20226061.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226062,Sinh Vien Test 0732,sv20226062.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226063,Sinh Vien Test 0733,sv20226063.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226064,Sinh Vien Test 0734,sv20226064.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226065,Sinh Vien Test 0735,sv20226065.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226066,Sinh Vien Test 0736,sv20226066.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226067,Sinh Vien Test 0737,sv20226067.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226068,Sinh Vien Test 0738,sv20226068.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226069,Sinh Vien Test 0739,sv20226069.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226070,Sinh Vien Test 0740,sv20226070.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226071,Sinh Vien Test 0741,sv20226071.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226072,Sinh Vien Test 0742,sv20226072.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226073,Sinh Vien Test 0743,sv20226073.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226074,Sinh Vien Test 0744,sv20226074.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226075,Sinh Vien Test 0745,sv20226075.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226076,Sinh Vien Test 0746,sv20226076.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226077,Sinh Vien Test 0747,sv20226077.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226078,Sinh Vien Test 0748,sv20226078.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226079,Sinh Vien Test 0749,sv20226079.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226080,Sinh Vien Test 0750,sv20226080.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226081,Sinh Vien Test 0751,sv20226081.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226082,Sinh Vien Test 0752,sv20226082.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226083,Sinh Vien Test 0753,sv20226083.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226084,Sinh Vien Test 0754,sv20226084.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226085,Sinh Vien Test 0755,sv20226085.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226086,Sinh Vien Test 0756,sv20226086.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226087,Sinh Vien Test 0757,sv20226087.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226088,Sinh Vien Test 0758,sv20226088.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226089,Sinh Vien Test 0759,sv20226089.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226090,Sinh Vien Test 0760,sv20226090.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226091,Sinh Vien Test 0761,sv20226091.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226092,Sinh Vien Test 0762,sv20226092.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226093,Sinh Vien Test 0763,sv20226093.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226094,Sinh Vien Test 0764,sv20226094.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226095,Sinh Vien Test 0765,sv20226095.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226096,Sinh Vien Test 0766,sv20226096.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226097,Sinh Vien Test 0767,sv20226097.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226098,Sinh Vien Test 0768,sv20226098.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226099,Sinh Vien Test 0769,sv20226099.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226100,Sinh Vien Test 0770,sv20226100.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226101,Sinh Vien Test 0771,sv20226101.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226102,Sinh Vien Test 0772,sv20226102.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226103,Sinh Vien Test 0773,sv20226103.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226104,Sinh Vien Test 0774,sv20226104.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226105,Sinh Vien Test 0775,sv20226105.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226106,Sinh Vien Test 0776,sv20226106.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226107,Sinh Vien Test 0777,sv20226107.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226108,Sinh Vien Test 0778,sv20226108.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226109,Sinh Vien Test 0779,sv20226109.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226110,Sinh Vien Test 0780,sv20226110.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226111,Sinh Vien Test 0781,sv20226111.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226112,Sinh Vien Test 0782,sv20226112.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226113,Sinh Vien Test 0783,sv20226113.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226114,Sinh Vien Test 0784,sv20226114.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226115,Sinh Vien Test 0785,sv20226115.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226116,Sinh Vien Test 0786,sv20226116.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226117,Sinh Vien Test 0787,sv20226117.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226118,Sinh Vien Test 0788,sv20226118.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226119,Sinh Vien Test 0789,sv20226119.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226120,Sinh Vien Test 0790,sv20226120.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226121,Sinh Vien Test 0791,sv20226121.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226122,Sinh Vien Test 0792,sv20226122.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226123,Sinh Vien Test 0793,sv20226123.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226124,Sinh Vien Test 0794,sv20226124.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226125,Sinh Vien Test 0795,sv20226125.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226126,Sinh Vien Test 0796,sv20226126.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226127,Sinh Vien Test 0797,sv20226127.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226128,Sinh Vien Test 0798,sv20226128.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226129,Sinh Vien Test 0799,sv20226129.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226130,Sinh Vien Test 0800,sv20226130.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226131,Sinh Vien Test 0801,sv20226131.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226132,Sinh Vien Test 0802,sv20226132.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226133,Sinh Vien Test 0803,sv20226133.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226134,Sinh Vien Test 0804,sv20226134.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226135,Sinh Vien Test 0805,sv20226135.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226136,Sinh Vien Test 0806,sv20226136.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226137,Sinh Vien Test 0807,sv20226137.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226138,Sinh Vien Test 0808,sv20226138.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226139,Sinh Vien Test 0809,sv20226139.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226140,Sinh Vien Test 0810,sv20226140.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226141,Sinh Vien Test 0811,sv20226141.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226142,Sinh Vien Test 0812,sv20226142.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226143,Sinh Vien Test 0813,sv20226143.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226144,Sinh Vien Test 0814,sv20226144.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226145,Sinh Vien Test 0815,sv20226145.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226146,Sinh Vien Test 0816,sv20226146.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226147,Sinh Vien Test 0817,sv20226147.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226148,Sinh Vien Test 0818,sv20226148.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226149,Sinh Vien Test 0819,sv20226149.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226150,Sinh Vien Test 0820,sv20226150.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226151,Sinh Vien Test 0821,sv20226151.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226152,Sinh Vien Test 0822,sv20226152.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226153,Sinh Vien Test 0823,sv20226153.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226154,Sinh Vien Test 0824,sv20226154.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226155,Sinh Vien Test 0825,sv20226155.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226156,Sinh Vien Test 0826,sv20226156.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226157,Sinh Vien Test 0827,sv20226157.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226158,Sinh Vien Test 0828,sv20226158.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226159,Sinh Vien Test 0829,sv20226159.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226160,Sinh Vien Test 0830,sv20226160.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226161,Sinh Vien Test 0831,sv20226161.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226162,Sinh Vien Test 0832,sv20226162.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226163,Sinh Vien Test 0833,sv20226163.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226164,Sinh Vien Test 0834,sv20226164.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226165,Sinh Vien Test 0835,sv20226165.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226166,Sinh Vien Test 0836,sv20226166.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226167,Sinh Vien Test 0837,sv20226167.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226168,Sinh Vien Test 0838,sv20226168.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226169,Sinh Vien Test 0839,sv20226169.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226170,Sinh Vien Test 0840,sv20226170.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226171,Sinh Vien Test 0841,sv20226171.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226172,Sinh Vien Test 0842,sv20226172.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226173,Sinh Vien Test 0843,sv20226173.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226174,Sinh Vien Test 0844,sv20226174.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226175,Sinh Vien Test 0845,sv20226175.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226176,Sinh Vien Test 0846,sv20226176.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226177,Sinh Vien Test 0847,sv20226177.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226178,Sinh Vien Test 0848,sv20226178.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226179,Sinh Vien Test 0849,sv20226179.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226180,Sinh Vien Test 0850,sv20226180.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226181,Sinh Vien Test 0851,sv20226181.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226182,Sinh Vien Test 0852,sv20226182.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226183,Sinh Vien Test 0853,sv20226183.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226184,Sinh Vien Test 0854,sv20226184.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226185,Sinh Vien Test 0855,sv20226185.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226186,Sinh Vien Test 0856,sv20226186.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226187,Sinh Vien Test 0857,sv20226187.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226188,Sinh Vien Test 0858,sv20226188.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226189,Sinh Vien Test 0859,sv20226189.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226190,Sinh Vien Test 0860,sv20226190.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226191,Sinh Vien Test 0861,sv20226191.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226192,Sinh Vien Test 0862,sv20226192.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226193,Sinh Vien Test 0863,sv20226193.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226194,Sinh Vien Test 0864,sv20226194.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226195,Sinh Vien Test 0865,sv20226195.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226196,Sinh Vien Test 0866,sv20226196.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226197,Sinh Vien Test 0867,sv20226197.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226198,Sinh Vien Test 0868,sv20226198.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226199,Sinh Vien Test 0869,sv20226199.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226200,Sinh Vien Test 0870,sv20226200.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226201,Sinh Vien Test 0871,sv20226201.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226202,Sinh Vien Test 0872,sv20226202.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226203,Sinh Vien Test 0873,sv20226203.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226204,Sinh Vien Test 0874,sv20226204.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226205,Sinh Vien Test 0875,sv20226205.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226206,Sinh Vien Test 0876,sv20226206.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226207,Sinh Vien Test 0877,sv20226207.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226208,Sinh Vien Test 0878,sv20226208.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226209,Sinh Vien Test 0879,sv20226209.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226210,Sinh Vien Test 0880,sv20226210.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226211,Sinh Vien Test 0881,sv20226211.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226212,Sinh Vien Test 0882,sv20226212.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226213,Sinh Vien Test 0883,sv20226213.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226214,Sinh Vien Test 0884,sv20226214.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226215,Sinh Vien Test 0885,sv20226215.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226216,Sinh Vien Test 0886,sv20226216.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226217,Sinh Vien Test 0887,sv20226217.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226218,Sinh Vien Test 0888,sv20226218.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226219,Sinh Vien Test 0889,sv20226219.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226220,Sinh Vien Test 0890,sv20226220.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226221,Sinh Vien Test 0891,sv20226221.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226222,Sinh Vien Test 0892,sv20226222.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226223,Sinh Vien Test 0893,sv20226223.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226224,Sinh Vien Test 0894,sv20226224.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226225,Sinh Vien Test 0895,sv20226225.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226226,Sinh Vien Test 0896,sv20226226.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226227,Sinh Vien Test 0897,sv20226227.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226228,Sinh Vien Test 0898,sv20226228.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226229,Sinh Vien Test 0899,sv20226229.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226230,Sinh Vien Test 0900,sv20226230.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226231,Sinh Vien Test 0901,sv20226231.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226232,Sinh Vien Test 0902,sv20226232.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226233,Sinh Vien Test 0903,sv20226233.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226234,Sinh Vien Test 0904,sv20226234.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226235,Sinh Vien Test 0905,sv20226235.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226236,Sinh Vien Test 0906,sv20226236.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226237,Sinh Vien Test 0907,sv20226237.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226238,Sinh Vien Test 0908,sv20226238.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226239,Sinh Vien Test 0909,sv20226239.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226240,Sinh Vien Test 0910,sv20226240.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226241,Sinh Vien Test 0911,sv20226241.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226242,Sinh Vien Test 0912,sv20226242.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226243,Sinh Vien Test 0913,sv20226243.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226244,Sinh Vien Test 0914,sv20226244.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226245,Sinh Vien Test 0915,sv20226245.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226246,Sinh Vien Test 0916,sv20226246.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226247,Sinh Vien Test 0917,sv20226247.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226248,Sinh Vien Test 0918,sv20226248.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226249,Sinh Vien Test 0919,sv20226249.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226250,Sinh Vien Test 0920,sv20226250.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226251,Sinh Vien Test 0921,sv20226251.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226252,Sinh Vien Test 0922,sv20226252.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226253,Sinh Vien Test 0923,sv20226253.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226254,Sinh Vien Test 0924,sv20226254.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226255,Sinh Vien Test 0925,sv20226255.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226256,Sinh Vien Test 0926,sv20226256.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226257,Sinh Vien Test 0927,sv20226257.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226258,Sinh Vien Test 0928,sv20226258.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226259,Sinh Vien Test 0929,sv20226259.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226260,Sinh Vien Test 0930,sv20226260.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226261,Sinh Vien Test 0931,sv20226261.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226262,Sinh Vien Test 0932,sv20226262.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226263,Sinh Vien Test 0933,sv20226263.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226264,Sinh Vien Test 0934,sv20226264.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226265,Sinh Vien Test 0935,sv20226265.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226266,Sinh Vien Test 0936,sv20226266.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226267,Sinh Vien Test 0937,sv20226267.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226268,Sinh Vien Test 0938,sv20226268.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226269,Sinh Vien Test 0939,sv20226269.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226270,Sinh Vien Test 0940,sv20226270.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226271,Sinh Vien Test 0941,sv20226271.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226272,Sinh Vien Test 0942,sv20226272.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226273,Sinh Vien Test 0943,sv20226273.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226274,Sinh Vien Test 0944,sv20226274.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226275,Sinh Vien Test 0945,sv20226275.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226276,Sinh Vien Test 0946,sv20226276.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226277,Sinh Vien Test 0947,sv20226277.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226278,Sinh Vien Test 0948,sv20226278.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226279,Sinh Vien Test 0949,sv20226279.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226280,Sinh Vien Test 0950,sv20226280.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226281,Sinh Vien Test 0951,sv20226281.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226282,Sinh Vien Test 0952,sv20226282.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226283,Sinh Vien Test 0953,sv20226283.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226284,Sinh Vien Test 0954,sv20226284.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226285,Sinh Vien Test 0955,sv20226285.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226286,Sinh Vien Test 0956,sv20226286.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226287,Sinh Vien Test 0957,sv20226287.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226288,Sinh Vien Test 0958,sv20226288.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226289,Sinh Vien Test 0959,sv20226289.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226290,Sinh Vien Test 0960,sv20226290.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226291,Sinh Vien Test 0961,sv20226291.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226292,Sinh Vien Test 0962,sv20226292.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226293,Sinh Vien Test 0963,sv20226293.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226294,Sinh Vien Test 0964,sv20226294.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226295,Sinh Vien Test 0965,sv20226295.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226296,Sinh Vien Test 0966,sv20226296.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226297,Sinh Vien Test 0967,sv20226297.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226298,Sinh Vien Test 0968,sv20226298.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226299,Sinh Vien Test 0969,sv20226299.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226300,Sinh Vien Test 0970,sv20226300.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226301,Sinh Vien Test 0971,sv20226301.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226302,Sinh Vien Test 0972,sv20226302.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226303,Sinh Vien Test 0973,sv20226303.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226304,Sinh Vien Test 0974,sv20226304.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226305,Sinh Vien Test 0975,sv20226305.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226306,Sinh Vien Test 0976,sv20226306.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226307,Sinh Vien Test 0977,sv20226307.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226308,Sinh Vien Test 0978,sv20226308.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226309,Sinh Vien Test 0979,sv20226309.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226310,Sinh Vien Test 0980,sv20226310.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226311,Sinh Vien Test 0981,sv20226311.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226312,Sinh Vien Test 0982,sv20226312.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226313,Sinh Vien Test 0983,sv20226313.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226314,Sinh Vien Test 0984,sv20226314.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226315,Sinh Vien Test 0985,sv20226315.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226316,Sinh Vien Test 0986,sv20226316.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226317,Sinh Vien Test 0987,sv20226317.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226318,Sinh Vien Test 0988,sv20226318.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226319,Sinh Vien Test 0989,sv20226319.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226320,Sinh Vien Test 0990,sv20226320.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226321,Sinh Vien Test 0991,sv20226321.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226322,Sinh Vien Test 0992,sv20226322.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226323,Sinh Vien Test 0993,sv20226323.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226324,Sinh Vien Test 0994,sv20226324.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true
+20226325,Sinh Vien Test 0995,sv20226325.test@sis.hust.edu.vn,1,STUDENT,2022,CNTT,true
+20226326,Sinh Vien Test 0996,sv20226326.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học máy tính,true
+20226327,Sinh Vien Test 0997,sv20226327.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật máy tính,true
+20226328,Sinh Vien Test 0998,sv20226328.test@sis.hust.edu.vn,1,STUDENT,2022,Kỹ thuật phần mềm,true
+20226329,Sinh Vien Test 0999,sv20226329.test@sis.hust.edu.vn,1,STUDENT,2022,Hệ thống thông tin,true
+20226330,Sinh Vien Test 1000,sv20226330.test@sis.hust.edu.vn,1,STUDENT,2022,Khoa học dữ liệu,true
+20226331,Sinh Vien Test 1001,sv20226331.test@sis.hust.edu.vn,1,STUDENT,2022,An toàn thông tin,true

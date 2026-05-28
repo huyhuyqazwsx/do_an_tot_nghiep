@@ -15,7 +15,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+  ) { }
 
   async login(studentCode: string, password: string) {
     // TODO: Xóa bypass này sau khi đã seed tài khoản admin thật vào DB

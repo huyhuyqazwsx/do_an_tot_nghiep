@@ -221,6 +221,7 @@ export class RegistrationsService {
       batchId,
       userId,
       semester,
+      queuedAt: new Date().toISOString(),
       // Gửi TẤT CẢ row (allRows) để Worker insert đúng số slot cho từng buổi học
       items: allRows.map((row) => ({
         classSectionId: row.id,
@@ -361,6 +362,7 @@ export class RegistrationsService {
       batchId,
       userId,
       semester,
+      queuedAt: new Date().toISOString(),
       // Huỷ TẤT CẢ row (mọi buổi học) của các mã lớp được chọn
       items: classSectionIds.map((classSectionId) => ({ classSectionId })),
     };

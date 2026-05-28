@@ -18,6 +18,7 @@ import { MailTestingModule } from './modules/mail-testing/mail-testing.module';
 import { GradesModule } from './modules/grades/grades.module';
 import { RegistrationSlotsModule } from './modules/registration-slots/registration-slots.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     GradesModule,
     RegistrationSlotsModule,
     SettingsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

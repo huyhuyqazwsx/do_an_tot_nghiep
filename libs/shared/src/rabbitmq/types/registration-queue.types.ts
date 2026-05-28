@@ -32,6 +32,7 @@ export type CreateBatchJobPayload = {
   batchId: string;
   userId: string;
   semester: string;
+  queuedAt: string;
   items?: CreateRegistrationBatchJobItem[];
 };
 
@@ -40,6 +41,7 @@ export type CancelBatchJobPayload = {
   batchId: string;
   userId: string;
   semester: string;
+  queuedAt: string;
   items?: RegistrationBatchJobItem[];
 };
 
