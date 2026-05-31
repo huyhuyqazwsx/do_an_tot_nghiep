@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'do-an-api',
       script: './dist/apps/do-an/main.js',
-      instances: 2,
+      instances: 3,
       exec_mode: 'cluster',
       watch: false,
     },
@@ -17,7 +17,7 @@ module.exports = {
     {
       name: 'do-an-scheduler',
       script: './dist/apps/scheduler/main.js',
-      instances: 1,       // ← PHẢI là 1, tránh duplicate cron
+      instances: 1,
       exec_mode: 'fork',
       watch: false,
     },

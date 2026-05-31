@@ -1,11 +1,14 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '@app/shared';
+import { CourseRedisKey, PrismaService, REDIS_CLIENT } from '@app/shared';
 import { Prisma } from '@prisma/client';
+import Redis from 'ioredis';
+import { createHash, randomUUID } from 'node:crypto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { QueryCoursesDto } from './dto/query-courses.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -14,12 +17,18 @@ import { ImportedCourseRow } from './types/imported-course-row.type';
 import { UploadedCsvFile } from './types/uploaded-csv-file.type';
 import { CoursesHelperService } from './helpers/courses-helper.service';
 
+const COURSE_CACHE_TTL_SECONDS = 30 * 60;
+const COURSE_CACHE_LOCK_TTL_MS = 2_000;
+const COURSE_CACHE_WAIT_MS = 2;
+const COURSE_CACHE_MAX_WAIT_MS = 2_000;
+
 @Injectable()
 export class CoursesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly helper: CoursesHelperService,
-  ) {}
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) { }
 
   async findAll(query: QueryCoursesDto) {
     const page = query.page ?? 1;
@@ -27,33 +36,48 @@ export class CoursesService {
     const skip = (page - 1) * limit;
     const where = this.helper.buildCourseWhereInput(query);
     const orderBy = this.helper.buildCourseOrderBy(query);
+    const cacheKey = this.buildCourseListCacheKey({
+      page,
+      limit,
+      skip,
+      where,
+      orderBy,
+    });
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.course.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy,
-      }),
-      this.prisma.course.count({ where }),
-    ]);
+    return this.readThroughCourseCache(cacheKey, async () => {
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.course.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy,
+        }),
+        this.prisma.course.count({ where }),
+      ]);
 
-    return {
-      items,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
-      },
-    };
+      return {
+        items,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+        },
+      };
+    });
   }
 
   async findOne(code: string) {
     const normalizedCode = code.trim();
-    const course = await this.prisma.course.findUnique({
-      where: { code: normalizedCode },
-    });
+    const cacheKey = CourseRedisKey.one(
+      this.hashCachePayload({ code: normalizedCode }),
+    );
+
+    const course = await this.readThroughCourseCache(cacheKey, () =>
+      this.prisma.course.findUnique({
+        where: { code: normalizedCode },
+      }),
+    );
 
     if (!course) {
       throw new NotFoundException(`Course not found: ${normalizedCode}`);
@@ -66,7 +90,9 @@ export class CoursesService {
     const data = this.helper.toCourseCreateInput(createCourseDto);
 
     try {
-      return await this.prisma.course.create({ data });
+      const course = await this.prisma.course.create({ data });
+      await this.clearCoursesCache();
+      return course;
     } catch (error) {
       this.helper.handleCourseWriteError(error, data.code);
     }
@@ -80,10 +106,12 @@ export class CoursesService {
     const targetCode = updateCourseDto.code?.trim() || normalizedCode;
 
     try {
-      return await this.prisma.course.update({
+      const course = await this.prisma.course.update({
         where: { code: normalizedCode },
         data,
       });
+      await this.clearCoursesCache();
+      return course;
     } catch (error) {
       this.helper.handleCourseWriteError(error, targetCode);
     }
@@ -94,9 +122,11 @@ export class CoursesService {
     await this.helper.ensureCourseExists(normalizedCode);
 
     try {
-      return await this.prisma.course.delete({
+      const course = await this.prisma.course.delete({
         where: { code: normalizedCode },
       });
+      await this.clearCoursesCache();
+      return course;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -175,6 +205,7 @@ export class CoursesService {
         data: filteredData,
         skipDuplicates: true,
       });
+      await this.clearCoursesCache();
 
       return {
         fileName: file.originalname,
@@ -193,5 +224,105 @@ export class CoursesService {
 
       throw error;
     }
+  }
+
+  private async readThroughCourseCache<T>(
+    cacheKey: string,
+    loadFromDb: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached !== null) return JSON.parse(cached) as T;
+
+      const lockKey = `${cacheKey}:lock`;
+      const lockToken = randomUUID();
+      const locked = await this.redis.set(
+        lockKey,
+        lockToken,
+        'PX',
+        COURSE_CACHE_LOCK_TTL_MS,
+        'NX',
+      );
+
+      if (locked === 'OK') {
+        try {
+          const value = await loadFromDb();
+          await this.redis.set(
+            cacheKey,
+            JSON.stringify(value),
+            'EX',
+            COURSE_CACHE_TTL_SECONDS,
+          );
+          return value;
+        } finally {
+          await this.releaseCourseCacheLock(lockKey, lockToken);
+        }
+      }
+
+      const waitUntil = Date.now() + COURSE_CACHE_MAX_WAIT_MS;
+      while (Date.now() < waitUntil) {
+        await this.sleep(COURSE_CACHE_WAIT_MS);
+        const value = await this.redis.get(cacheKey);
+        if (value !== null) return JSON.parse(value) as T;
+      }
+
+      return loadFromDb();
+    } catch {
+      return loadFromDb();
+    }
+  }
+
+  private async releaseCourseCacheLock(lockKey: string, lockToken: string) {
+    await this.redis.eval(
+      `
+      if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+      end
+      return 0
+      `,
+      1,
+      lockKey,
+      lockToken,
+    );
+  }
+
+  private buildCourseListCacheKey(payload: {
+    page: number;
+    limit: number;
+    skip: number;
+    where: Prisma.CourseWhereInput;
+    orderBy: Prisma.CourseOrderByWithRelationInput;
+  }) {
+    return CourseRedisKey.list(this.hashCachePayload(payload));
+  }
+
+  private hashCachePayload(payload: unknown) {
+    return createHash('sha1')
+      .update(JSON.stringify(payload))
+      .digest('hex');
+  }
+
+  private async clearCoursesCache() {
+    try {
+      let cursor = '0';
+      do {
+        const [nextCursor, keys] = await this.redis.scan(
+          cursor,
+          'MATCH',
+          CourseRedisKey.all(),
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        const cacheKeys = keys.filter((key) => !key.endsWith(':lock'));
+        if (cacheKeys.length > 0) await this.redis.del(...cacheKeys);
+      } while (cursor !== '0');
+    } catch {
+      // DB writes must not fail just because cache invalidation is unavailable.
+    }
+  }
+
+  private sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

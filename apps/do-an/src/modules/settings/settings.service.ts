@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '@app/shared';
+import { BadRequestException, Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
+import { PrismaService, REDIS_CLIENT, RegistrationRedisKey } from '@app/shared';
+import Redis from 'ioredis';
 import type { SystemSettings } from './dto/update-settings.dto';
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -18,7 +19,10 @@ export class SettingsService implements OnModuleInit {
   // In-memory cache — loaded from DB on startup, updated on PATCH
   private settings: SystemSettings = { ...DEFAULT_SETTINGS };
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) { }
 
   async onModuleInit() {
     const row = await this.prisma.systemSetting.findUnique({ where: { id: 1 } });
@@ -46,6 +50,7 @@ export class SettingsService implements OnModuleInit {
   }
 
   async update(patch: Partial<SystemSettings>): Promise<SystemSettings> {
+    const oldSemester = this.settings.currentSemester;
     // Merge vào memory trước
     const nextSettings = { ...this.settings, ...patch };
     this.assertValidRegistrationRange(
@@ -77,6 +82,13 @@ export class SettingsService implements OnModuleInit {
     });
 
     this.logger.log(`[Settings] Updated: ${JSON.stringify(patch)}`);
+    // Clear Redis cache when settings change
+    await this.redis.del(RegistrationRedisKey.session(this.settings.currentSemester));
+    if (oldSemester !== this.settings.currentSemester) {
+      await this.redis.del(RegistrationRedisKey.session(oldSemester));
+    }
+    this.logger.log(`[Settings] Redis cache cleared for session keys`);
+
     return { ...this.settings };
   }
 

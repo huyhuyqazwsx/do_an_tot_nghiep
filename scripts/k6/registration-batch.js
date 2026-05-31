@@ -5,13 +5,13 @@ import { SharedArray } from "k6/data";
 import exec from "k6/execution";
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
-const SEMESTER = __ENV.SEMESTER || "20252";
+const SEMESTER = __ENV.SEMESTER || "20242";
 const PASSWORD = __ENV.PASSWORD || "1";
-const SECTION_CODES_FILE = __ENV.SECTION_CODES_FILE || "scripts/k6/section-codes.json";
+const SECTION_CODES_FILE =
+  __ENV.SECTION_CODES_FILE || "./section-codes.json";
 const STUDENT_START = Number(__ENV.STUDENT_START || "20225331");
 const STUDENT_END = Number(__ENV.STUDENT_END || "20226331");
-const SECTIONS_PER_BATCH = Number(__ENV.SECTIONS_PER_BATCH || "1");
-const SECTION_LIMIT = Number(__ENV.SECTION_LIMIT || "500");
+const GROUP_SIZE = Number(__ENV.GROUP_SIZE || "100");
 const POLL_BATCH = (__ENV.POLL_BATCH || "true") !== "false";
 const CANCEL_AFTER_CREATE = (__ENV.CANCEL_AFTER_CREATE || "true") !== "false";
 const POLL_ATTEMPTS = Number(__ENV.POLL_ATTEMPTS || "20");
@@ -38,12 +38,18 @@ export const options = {
   },
 };
 
+// ─── Custom metrics ──────────────────────────────────────────────────────────
+
 const createBatchOk = new Rate("create_batch_ok");
 const cancelBatchOk = new Rate("cancel_batch_ok");
 const batchCompleted = new Rate("batch_completed");
 const loginOk = new Rate("login_ok");
+const searchOk = new Rate("search_ok");
 const apiRejected = new Counter("api_rejected");
 const batchPollDuration = new Trend("batch_poll_duration");
+const searchDuration = new Trend("search_duration");
+
+// ─── Shared data ─────────────────────────────────────────────────────────────
 
 const users = new SharedArray("students", () => {
   const result = [];
@@ -53,57 +59,52 @@ const users = new SharedArray("students", () => {
   return result;
 });
 
-const configuredSectionCodes = new SharedArray("section-codes", () => {
+/**
+ * section-codes.json format: mảng của mảng
+ * [
+ *   ["166235", "166300"],   ← nhóm 0 (SV 0–99) đăng ký 2 lớp này
+ *   ["166355"],             ← nhóm 1 (SV 100–199) đăng ký lớp này
+ *   ["166380", "166400"]    ← nhóm 2 (SV 200–299) đăng ký 2 lớp này
+ * ]
+ */
+const sectionCodeBatches = new SharedArray("section-code-batches", () => {
   try {
     const parsed = JSON.parse(open(SECTION_CODES_FILE));
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((code) => String(code).trim()).filter(Boolean);
+    // Hỗ trợ cả format cũ (mảng phẳng) lẫn format mới (mảng của mảng)
+    if (parsed.length > 0 && !Array.isArray(parsed[0])) {
+      // Format cũ: ["code1", "code2"] → chuyển thành [["code1"], ["code2"]]
+      return parsed.map((code) => [String(code).trim()]);
+    }
+    return parsed.map((batch) =>
+      batch.map((code) => String(code).trim()).filter(Boolean),
+    );
   } catch {
     return [];
   }
 });
 
+// ─── Setup ───────────────────────────────────────────────────────────────────
+
 export function setup() {
-  if (configuredSectionCodes.length > 0) {
-    return { sectionCodes: configuredSectionCodes };
+  if (sectionCodeBatches.length > 0) {
+    console.log(
+      `Loaded ${sectionCodeBatches.length} section code batches from ${SECTION_CODES_FILE}`,
+    );
+    for (let i = 0; i < sectionCodeBatches.length; i++) {
+      console.log(
+        `  Batch[${i}] (SV ${i * GROUP_SIZE}–${(i + 1) * GROUP_SIZE - 1}): [${sectionCodeBatches[i].join(", ")}]`,
+      );
+    }
+    return { batches: sectionCodeBatches };
   }
 
-  const adminToken = login("999999999", "admin");
-  if (!adminToken) {
-    fail("Cannot login admin to prepare class section list");
-  }
-
-  const res = http.get(
-    `${BASE_URL}/api/class-sections?semester=${encodeURIComponent(SEMESTER)}&limit=${SECTION_LIMIT}&sortBy=sectionCode&sortOrder=asc`,
-    authParams(adminToken),
+  fail(
+    `No section codes found in ${SECTION_CODES_FILE}. Please create the file with format: [["code1","code2"], ["code3"]]`,
   );
-
-  check(res, {
-    "setup class sections loaded": (r) => r.status === 200,
-  });
-
-  if (res.status !== 200) {
-    fail(`Cannot load class sections: status=${res.status} body=${res.body}`);
-  }
-
-  const body = res.json();
-  const codes = [];
-  const seen = new Set();
-
-  for (const item of body.items || []) {
-    if (!item.sectionCode || seen.has(item.sectionCode)) continue;
-    if (item.sectionStatus === "CANCELLED" || item.sectionStatus === "REGISTRATION_CLOSED") continue;
-    if (Number(item.registeredCount || 0) >= Number(item.maxCapacity || 0)) continue;
-    seen.add(item.sectionCode);
-    codes.push(item.sectionCode);
-  }
-
-  if (codes.length < SECTIONS_PER_BATCH) {
-    fail(`Not enough open class sections for test. Found=${codes.length}`);
-  }
-
-  return { sectionCodes: codes };
 }
+
+// ─── Main scenario ───────────────────────────────────────────────────────────
 
 export default function (data) {
   const iterationIndex = exec.scenario.iterationInTest;
@@ -112,7 +113,17 @@ export default function (data) {
   loginOk.add(!!token);
   if (!token) return;
 
-  const sectionCodes = pickSections(data.sectionCodes, iterationIndex);
+  // 1. Chọn bộ section codes theo nhóm
+  const groupIndex = Math.floor(iterationIndex / GROUP_SIZE);
+  const batchIndex = groupIndex % sectionCodeBatches.length;
+  const sectionCodes = sectionCodeBatches[batchIndex];
+
+  // 2. Tìm kiếm lớp (giống luồng thật: SV search mã lớp → xem kết quả → chọn)
+  for (const code of sectionCodes) {
+    searchClassSection(token, code);
+  }
+
+  // 3. Gửi đăng ký batch
   const createRes = http.post(
     `${BASE_URL}/api/registrations/batches`,
     JSON.stringify({ semester: SEMESTER, sectionCodes }),
@@ -128,16 +139,19 @@ export default function (data) {
   });
 
   if (!accepted) {
+    console.log(`Failed to create batch (status ${createRes.status}):`, createRes.body);
     apiRejected.add(1);
     return;
   }
 
+  // 4. Poll kết quả batch
   const batchId = createRes.json("batchId");
   let createBatch = null;
   if (POLL_BATCH && batchId) {
     createBatch = pollBatch(token, batchId);
   }
 
+  // 5. Hủy lớp vừa đăng ký (giả lập SV thay đổi lịch)
   if (CANCEL_AFTER_CREATE && createBatch) {
     const successfulCodes = successSectionCodes(createBatch);
     if (successfulCodes.length > 0) {
@@ -147,6 +161,30 @@ export default function (data) {
 
   sleep(1);
 }
+
+// ─── Search class section (giả lập FE search trước khi chọn lớp) ────────────
+
+function searchClassSection(token, sectionCode) {
+  const startedAt = Date.now();
+  const res = http.get(
+    `${BASE_URL}/api/class-sections?semester=${encodeURIComponent(SEMESTER)}&sectionCode=${encodeURIComponent(sectionCode)}&limit=20`,
+    authParams(token),
+  );
+
+  const elapsed = Date.now() - startedAt;
+  searchDuration.add(elapsed);
+
+  const ok = res.status === 200;
+  searchOk.add(ok);
+
+  check(res, {
+    "search class section ok": (r) => r.status === 200,
+  });
+
+  return ok;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function login(studentCode, password) {
   const res = http.post(
@@ -217,22 +255,14 @@ function successSectionCodes(batch) {
   const seen = new Set();
 
   for (const item of batch.items || []) {
-    const code = item.status === "SUCCESS" ? item.classSection?.sectionCode : null;
+    const code =
+      item.status === "SUCCESS" ? item.classSection?.sectionCode : null;
     if (!code || seen.has(code)) continue;
     seen.add(code);
     codes.push(code);
   }
 
   return codes;
-}
-
-function pickSections(sectionCodes, iterationIndex) {
-  const start = (iterationIndex * SECTIONS_PER_BATCH) % sectionCodes.length;
-  const result = [];
-  for (let i = 0; i < SECTIONS_PER_BATCH; i += 1) {
-    result.push(sectionCodes[(start + i) % sectionCodes.length]);
-  }
-  return result;
 }
 
 function authParams(token) {

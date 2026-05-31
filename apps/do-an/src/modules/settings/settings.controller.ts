@@ -7,8 +7,7 @@ import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 @ApiTags('Settings')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@UseGuards(JwtAuthGuard)
 @Controller('api/settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
@@ -20,6 +19,8 @@ export class SettingsController {
   }
 
   @Patch()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update system settings (partial update)' })
   update(@Body() dto: UpdateSettingsDto) {
     return this.settingsService.update(dto);

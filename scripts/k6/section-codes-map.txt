@@ -1,0 +1,11 @@
+# Mã lớp - Tên môn học
+
+157537 - Lập trình mạng (IT4060) [LT+BT]
+157544 - Phát triển ứng dụng cho thiết bị di động (IT4785) [LT+BT]
+157539 - Hệ nhúng (IT4210) [LT+BT]
+750913 - Hệ nhúng (IT4210) [TN]
+157542 - Các hệ thống phân tán và ứng dụng (IT4611) [LT+BT]
+157522 - Nhập môn an toàn thông tin (IT4015) [LT+BT]
+157489 - Nhập môn công nghệ phần mềm (IT3180) [LT+BT]
+157533 - Phân tích và thiết kế hệ thống (IT3120) [LT+BT]
+750648 - Project II (IT3931) [DA]

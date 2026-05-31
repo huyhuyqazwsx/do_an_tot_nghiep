@@ -31,6 +31,8 @@ enum ClassSectionType {
   TTKT
   TTKS
   DATNKS @map("ĐATNKS")
+  KLTN
+  KLNC
 }
 
 enum SectionOpenGroup {
@@ -44,6 +46,7 @@ enum ClassSectionStatus {
   REGISTRATION_CLOSED    @map("Kết thúc ĐK")
   CANCELLED              @map("Huỷ lớp")
   SCHEDULING             @map("Đang xếp TKB")
+  OPEN_FOR_REGISTRATION  @map("Đăng ký")
 }
 
 enum GradeLetter {

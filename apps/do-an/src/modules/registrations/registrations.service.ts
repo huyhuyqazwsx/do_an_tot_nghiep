@@ -471,6 +471,8 @@ export class RegistrationsService {
                 id: true,
                 sectionCode: true,
                 sectionType: true,
+                requiresLab: true,
+                linkedSectionCode: true,
                 course: {
                   select: { id: true, code: true, name: true, credits: true },
                 },
@@ -518,6 +520,8 @@ export class RegistrationsService {
             id: true,
             sectionCode: true,
             sectionType: true,
+            requiresLab: true,
+            linkedSectionCode: true,
             course: {
               select: { id: true, code: true, name: true, credits: true },
             },
@@ -593,6 +597,7 @@ export class RegistrationsService {
             room: true,
             sectionType: true,
             requiresLab: true,
+            linkedSectionCode: true,
             maxCapacity: true,
             registeredCount: true,
             course: {
@@ -656,6 +661,7 @@ export class RegistrationsService {
             room: true,
             sectionType: true,
             requiresLab: true,
+            linkedSectionCode: true,
             maxCapacity: true,
             registeredCount: true,
             course: {

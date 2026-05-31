@@ -212,6 +212,7 @@ export class RegistrationPrewarmService {
         weekRange: true,
         sectionType: true,
         requiresLab: true,
+        linkedSectionCode: true,
         maxCapacity: true,
         registeredCount: true,
       },
@@ -239,6 +240,7 @@ export class RegistrationPrewarmService {
         weekRange: s.weekRange ?? '',
         sectionType: s.sectionType ?? '',
         requiresLab: s.requiresLab ? '1' : '0',
+        linkedSectionCode: s.linkedSectionCode ?? '',
         maxCapacity: s.maxCapacity.toString(),
         registeredCount: s.registeredCount.toString(),
       });

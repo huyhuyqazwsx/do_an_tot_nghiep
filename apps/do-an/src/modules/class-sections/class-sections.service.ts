@@ -133,12 +133,9 @@ export class ClassSectionsService {
     const where: Prisma.ClassSectionWhereInput = {};
 
     if (q) {
-      where.OR = [
-        { sectionCode: { contains: q, mode: 'insensitive' } },
-        { room: { contains: q, mode: 'insensitive' } },
-        { course: { code: { contains: q, mode: 'insensitive' } } },
-        { course: { name: { contains: q, mode: 'insensitive' } } },
-      ];
+      throw new BadRequestException(
+        'Không hỗ trợ tìm kiếm mờ bằng q. Vui lòng nhập mã lớp bằng sectionCode.',
+      );
     }
 
     if (query.semester?.trim()) {
@@ -146,15 +143,12 @@ export class ClassSectionsService {
     }
 
     if (query.sectionCode?.trim()) {
-      where.sectionCode = {
-        contains: query.sectionCode.trim(),
-        mode: 'insensitive',
-      };
+      where.sectionCode = query.sectionCode.trim();
     }
 
     if (query.courseCode?.trim()) {
       where.course = {
-        code: { contains: query.courseCode.trim(), mode: 'insensitive' },
+        code: query.courseCode.trim(),
       };
     }
 
@@ -579,7 +573,7 @@ export class ClassSectionsService {
         line,
         lineNumber: headerIndex + index + 2,
       }))
-      .filter(({ line }) => line.trim().length > 0)
+      .filter(({ line }) => line.replace(/[,"]/g, '').trim().length > 0)
       .map(({ line, lineNumber }) => {
         const values = this.parseCsvLine(line);
 
@@ -716,6 +710,8 @@ export class ClassSectionsService {
       TTKT: ClassSectionType.TTKT,
       TTKS: ClassSectionType.TTKS,
       ĐATNKS: ClassSectionType.DATNKS,
+      KLTN: ClassSectionType.KLTN,
+      KLNC: ClassSectionType.KLNC,
     };
 
     const sectionType = sectionTypeMap[normalized];
@@ -759,6 +755,7 @@ export class ClassSectionsService {
       'Kết thúc ĐK': ClassSectionStatus.REGISTRATION_CLOSED,
       'Huỷ lớp': ClassSectionStatus.CANCELLED,
       'Đang xếp TKB': ClassSectionStatus.SCHEDULING,
+      'Đăng ký': ClassSectionStatus.OPEN_FOR_REGISTRATION,
     };
 
     const sectionStatus = sectionStatusMap[normalized];
