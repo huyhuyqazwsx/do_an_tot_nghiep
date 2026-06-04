@@ -15,7 +15,7 @@ const GROUP_SIZE = Number(__ENV.GROUP_SIZE || "100");
 const POLL_BATCH = (__ENV.POLL_BATCH || "true") !== "false";
 const CANCEL_AFTER_CREATE = (__ENV.CANCEL_AFTER_CREATE || "true") !== "false";
 const POLL_ATTEMPTS = Number(__ENV.POLL_ATTEMPTS || "20");
-const POLL_INTERVAL_SECONDS = Number(__ENV.POLL_INTERVAL_SECONDS || "0.5");
+const POLL_INTERVAL_SECONDS = Number(__ENV.POLL_INTERVAL_SECONDS || "1");
 
 export const options = {
   scenarios: {
@@ -121,6 +121,7 @@ export default function (data) {
   // 2. Tìm kiếm lớp (giống luồng thật: SV search mã lớp → xem kết quả → chọn)
   for (const code of sectionCodes) {
     searchClassSection(token, code);
+    sleep(1);
   }
 
   // 3. Gửi đăng ký batch
@@ -144,6 +145,8 @@ export default function (data) {
     return;
   }
 
+  sleep(1);
+
   // 4. Poll kết quả batch
   const batchId = createRes.json("batchId");
   let createBatch = null;
@@ -151,15 +154,16 @@ export default function (data) {
     createBatch = pollBatch(token, batchId);
   }
 
+  sleep(1);
+
   // 5. Hủy lớp vừa đăng ký (giả lập SV thay đổi lịch)
   if (CANCEL_AFTER_CREATE && createBatch) {
     const successfulCodes = successSectionCodes(createBatch);
     if (successfulCodes.length > 0) {
       cancelRegisteredSections(token, successfulCodes);
+      sleep(1);
     }
   }
-
-  sleep(1);
 }
 
 // ─── Search class section (giả lập FE search trước khi chọn lớp) ────────────
@@ -167,7 +171,7 @@ export default function (data) {
 function searchClassSection(token, sectionCode) {
   const startedAt = Date.now();
   const res = http.get(
-    `${BASE_URL}/api/class-sections?semester=${encodeURIComponent(SEMESTER)}&sectionCode=${encodeURIComponent(sectionCode)}&limit=20`,
+    `${BASE_URL}/api/class-sections/by-code/${encodeURIComponent(sectionCode)}?semester=${encodeURIComponent(SEMESTER)}`,
     authParams(token),
   );
 
@@ -178,7 +182,7 @@ function searchClassSection(token, sectionCode) {
   searchOk.add(ok);
 
   check(res, {
-    "search class section ok": (r) => r.status === 200,
+    'search class section ok': (r) => r.status === 200,
   });
 
   return ok;

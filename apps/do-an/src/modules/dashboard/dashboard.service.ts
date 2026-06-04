@@ -1,12 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { PrismaService, REDIS_CLIENT } from '@app/shared';
+import { PrismaService, REDIS_CLIENT, BatchLogRedisKey } from '@app/shared';
 import {
   RegistrationBatchItemStatus,
   RegistrationBatchStatus,
   RegistrationBatchType,
 } from '@prisma/client';
 import Redis from 'ioredis';
-import { RPS_KEY_PREFIX } from '../../common/middlewares/api-logger.middleware';
+import { RPS_KEY_PREFIX, RPS_WINDOW_SECONDS } from '../../common/middlewares/api-logger.middleware';
 
 @Injectable()
 export class DashboardService {
@@ -20,11 +20,14 @@ export class DashboardService {
   async getOverview(semester: string) {
     const now = new Date();
     const metricsWindowSeconds = 60;
-    const throughputWindowSeconds = 1;
     const failureWindowSeconds = 60 * 60;
-    const metricsFrom = new Date(now.getTime() - metricsWindowSeconds * 1000);
-    const throughputFrom = new Date(now.getTime() - throughputWindowSeconds * 1000);
     const failuresFrom = new Date(now.getTime() - failureWindowSeconds * 1000);
+
+    // Đọc metrics batch từ Redis (thay thế 2 Prisma aggregate cũ)
+    const [redisMetrics1m, redisMetrics1s] = await Promise.all([
+      this.aggregateBatchLogsFromRedis(semester, metricsWindowSeconds),
+      this.aggregateBatchLogsFromRedis(semester, 1),
+    ]);
 
     const [
       // ─── Counts ──────────────────────────────────────────────
@@ -37,12 +40,6 @@ export class DashboardService {
       totalBatches,
       pendingBatches,
       batchItemCounts,
-
-      // ─── Processing logs (1m) ───────────────────────────────
-      processingLogs1m,
-
-      // ─── Throughput logs (1s) ───────────────────────────────
-      throughputLogs1s,
 
       // ─── Failed items (1h) ──────────────────────────────────
       failedItems1h,
@@ -86,30 +83,7 @@ export class DashboardService {
         _count: { id: true },
       }),
 
-      // 8. Processing logs 1 phút gần nhất (avg latency, failedItems1m)
-      this.prisma.batchProcessingLog.aggregate({
-        where: { semester, createdAt: { gte: metricsFrom } },
-        _sum: {
-          totalItems: true,
-          successItems: true,
-          failedItems: true,
-          processingDurationMs: true,
-          queueWaitMs: true,
-        },
-        _count: { id: true },
-        _avg: {
-          processingDurationMs: true,
-          queueWaitMs: true,
-        },
-      }),
-
-      // 9. Throughput logs 1 giây gần nhất (chỉ dùng để tính items/s chính xác)
-      this.prisma.batchProcessingLog.aggregate({
-        where: { semester, createdAt: { gte: throughputFrom } },
-        _sum: { totalItems: true },
-      }),
-
-      // 10. Failed items 1 giờ gần nhất, query riêng để phục vụ chi tiết fail
+      // 8. Failed items 1 giờ gần nhất, query riêng để phục vụ chi tiết fail
       this.prisma.registrationBatchItem.count({
         where: {
           status: RegistrationBatchItemStatus.FAILED,
@@ -159,12 +133,11 @@ export class DashboardService {
     const totalAllItems =
       totalSuccessItems + totalFailedItems + totalPendingItems;
 
-    const logSum = processingLogs1m._sum;
+    const logSum = redisMetrics1m;
 
-    // itemsPerSecond: lấy từ aggregate 1 giây gần nhất để phản ánh throughput tức thì,
-    // không dùng tổng 1 phút để tránh bị làm mượt (smoothed) và thiếu chính xác.
-    const itemsPerSecond = throughputLogs1s._sum.totalItems
-      ? throughputLogs1s._sum.totalItems / throughputWindowSeconds
+    // itemsPerSecond: từ aggregate Redis 1 giây gần nhất.
+    const itemsPerSecond = redisMetrics1s.totalItems > 0
+      ? redisMetrics1s.totalItems / 1
       : null;
 
     // Tỉ lệ thành công
@@ -218,18 +191,19 @@ export class DashboardService {
         batchSuccessRate: batchSuccessRate
           ? Number(batchSuccessRate.toFixed(1))
           : null,
-        totalFailedItems1m: failedItems1m,
+        totalFailedItems1m: logSum.failedItems,
         totalFailedItems1h: failedItems1h,
-        avgProcessingDurationMs: processingLogs1m._avg.processingDurationMs
-          ? Number(processingLogs1m._avg.processingDurationMs.toFixed(0))
+        avgProcessingDurationMs: logSum.avgProcessingDurationMs !== null
+          ? Number(logSum.avgProcessingDurationMs.toFixed(0))
           : null,
-        avgQueueWaitMs: processingLogs1m._avg.queueWaitMs
-          ? Number(processingLogs1m._avg.queueWaitMs.toFixed(0))
+        avgQueueWaitMs: logSum.avgQueueWaitMs !== null
+          ? Number(logSum.avgQueueWaitMs.toFixed(0))
           : null,
         itemsPerSecond: itemsPerSecond
           ? Number(itemsPerSecond.toFixed(2))
           : null,
         requestsPerSecond: await this.getRequestsPerSecond(),
+        requestsLast5Min: await this.getTotalRequestsLast5Min(),
       },
 
       // ─── Registration flow ───────────────────────────────────
@@ -301,5 +275,140 @@ export class DashboardService {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Tổng số request trong 5 phút gần nhất — cộng dồn từng bucket giây.
+   */
+  async getTotalRequestsLast5Min(): Promise<number | null> {
+    try {
+      const nowSecond = Math.floor(Date.now() / 1000);
+      const keys: string[] = [];
+      for (let i = 0; i < RPS_WINDOW_SECONDS; i++) {
+        keys.push(`${RPS_KEY_PREFIX}${nowSecond - i}`);
+      }
+      const values = await this.redis.mget(...keys);
+      const total = values.reduce(
+        (sum, v) => sum + (v ? Number(v) : 0),
+        0,
+      );
+      return total;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Reset toàn bộ dữ liệu test:
+   * - TRUNCATE các bảng batch_processing_logs, outbox, registration_batch_items, registration_batches
+   * - UPDATE class_sections SET sl_dk = 0
+   * - Xóa tất cả Redis RPS bucket keys của 5 phút vừa rồi
+   */
+  async resetTestData(): Promise<{ message: string; redisKeysDeleted: number }> {
+    // 1. Reset DB (batch_processing_logs đã chuyển sang Redis, không cần TRUNCATE nữa)
+    await this.prisma.$executeRaw`TRUNCATE TABLE "outbox" CASCADE`;
+    await this.prisma.$executeRaw`TRUNCATE TABLE "registration_batch_items" CASCADE`;
+    await this.prisma.$executeRaw`TRUNCATE TABLE "registration_batches" CASCADE`;
+    await this.prisma.$executeRaw`UPDATE "class_sections" SET "sl_dk" = 0`;
+
+    this.logger.warn('[Reset] DB tables truncated and sl_dk reset to 0');
+
+    // 2. Xóa Redis RPS keys 5 phút gần nhất
+    const nowSecond = Math.floor(Date.now() / 1000);
+    const rpsKeys: string[] = [];
+    for (let i = 0; i < RPS_WINDOW_SECONDS; i++) {
+      rpsKeys.push(`${RPS_KEY_PREFIX}${nowSecond - i}`);
+    }
+
+    // 3. Xóa Redis batch log keys (batch:log:{semester}:*)
+    const batchPattern = BatchLogRedisKey.pattern(await this.prisma.systemSetting
+      .findUnique({ where: { id: 1 } })
+      .then((s) => s?.currentSemester ?? ''));
+    const [, batchKeys] = await this.redis.scan('0', 'MATCH', batchPattern, 'COUNT', 500)
+      .catch(() => ['0', [] as string[]] as [string, string[]]);
+
+    const allKeysToDelete = [...rpsKeys, ...batchKeys];
+    let redisKeysDeleted = 0;
+    try {
+      if (allKeysToDelete.length > 0) {
+        redisKeysDeleted = await this.redis.del(...allKeysToDelete);
+      }
+      this.logger.warn(
+        `[Reset] Deleted ${redisKeysDeleted} Redis keys (RPS + batch logs)`,
+      );
+    } catch (err) {
+      this.logger.error(`[Reset] Failed to delete Redis keys: ${(err as Error).message}`);
+    }
+
+    return {
+      message: 'Reset thành công. Tất cả dữ liệu test đã được xóa.',
+      redisKeysDeleted,
+    };
+  }
+
+  /**
+   * Đọc và aggregate toàn bộ batch log trong Redis theo thời gian window (giây).
+   * Dùng SCAN + HGETALL, filter theo createdAtMs, rồi tính toần.
+   */
+  private async aggregateBatchLogsFromRedis(
+    semester: string,
+    windowSeconds: number,
+  ): Promise<{
+    totalItems: number;
+    successItems: number;
+    failedItems: number;
+    avgProcessingDurationMs: number | null;
+    avgQueueWaitMs: number | null;
+  }> {
+    const cutoffMs = Date.now() - windowSeconds * 1000;
+    const pattern = BatchLogRedisKey.pattern(semester);
+
+    let cursor = '0';
+    const entries: Record<string, string>[] = [];
+    do {
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor, 'MATCH', pattern, 'COUNT', 200,
+      );
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        const pipeline = this.redis.pipeline();
+        for (const key of keys) pipeline.hgetall(key);
+        const results = await pipeline.exec();
+        if (results) {
+          for (const [, data] of results) {
+            if (data && typeof data === 'object') {
+              entries.push(data as Record<string, string>);
+            }
+          }
+        }
+      }
+    } while (cursor !== '0');
+
+    let totalItems = 0;
+    let successItems = 0;
+    let failedItems = 0;
+    let sumDuration = 0;
+    let sumQueue = 0;
+    let count = 0;
+
+    for (const entry of entries) {
+      const createdAtMs = Number(entry['createdAtMs'] ?? 0);
+      if (createdAtMs < cutoffMs) continue;
+
+      totalItems += Number(entry['totalItems'] ?? 0);
+      successItems += Number(entry['successItems'] ?? 0);
+      failedItems += Number(entry['failedItems'] ?? 0);
+      sumDuration += Number(entry['processingDurationMs'] ?? 0);
+      sumQueue += Number(entry['queueWaitMs'] ?? 0);
+      count++;
+    }
+
+    return {
+      totalItems,
+      successItems,
+      failedItems,
+      avgProcessingDurationMs: count > 0 ? sumDuration / count : null,
+      avgQueueWaitMs: count > 0 ? sumQueue / count : null,
+    };
   }
 }

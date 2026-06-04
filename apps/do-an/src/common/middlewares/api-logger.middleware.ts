@@ -5,8 +5,10 @@ import Redis from 'ioredis';
 
 /** Redis key prefix cho request counter theo giây */
 export const RPS_KEY_PREFIX = 'rps:';
-/** TTL ngắn để key tự xóa, tránh tồn đọng */
-const RPS_TTL_SECONDS = 10;
+/** Window 5 phút để tổng hợp tổng request */
+export const RPS_WINDOW_SECONDS = 5 * 60;
+/** TTL đủ dài để bucket không bị xóa trước khi hết window 5 phút */
+const RPS_TTL_SECONDS = RPS_WINDOW_SECONDS + 1;
 
 @Injectable()
 export class ApiLoggerMiddleware implements NestMiddleware {

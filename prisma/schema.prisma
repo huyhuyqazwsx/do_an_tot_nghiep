@@ -194,6 +194,7 @@ model RegistrationBatch {
   items RegistrationBatchItem[]
 
   @@index([userId, createdAt(sort: Desc)], name: "idx_reg_batches_user_created")
+  @@index([userId, semester, status], name: "idx_reg_batches_user_semester_status")
   @@index([semester], name: "idx_reg_batches_semester")
   @@map("registration_batches")
 }
@@ -212,8 +213,8 @@ model RegistrationBatchItem {
   batch        RegistrationBatch @relation(fields: [batchId], references: [id])
   classSection ClassSection?     @relation(fields: [classSectionId], references: [id])
 
-  @@index([batchId], name: "idx_reg_batch_items_batch")
-  @@index([classSectionId], name: "idx_reg_batch_items_class_section")
+  @@index([batchId, status], name: "idx_reg_batch_items_batch_status")
+  @@index([status, classSectionId], name: "idx_reg_batch_items_status_section")
   @@map("registration_batch_items")
 }
 
@@ -294,33 +295,4 @@ model Outbox {
   @@index([status], name: "idx_outbox_status")
   @@index([createdAt], name: "idx_outbox_created")
   @@map("outbox")
-}
-
-// ============================================================
-// BATCH PROCESSING LOGS — Worker metrics cho Admin Dashboard
-// ============================================================
-model BatchProcessingLog {
-  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  batchId              String                @map("batch_id") @db.Uuid
-  semester             String                @db.VarChar(10)
-  batchType            RegistrationBatchType @map("batch_type")
-
-  // Timing
-  queuedAt             DateTime              @map("queued_at")
-  processingStartedAt  DateTime              @map("processing_started_at")
-  processingEndedAt    DateTime              @map("processing_ended_at")
-  queueWaitMs          Int                   @map("queue_wait_ms")
-  processingDurationMs Int                   @map("processing_duration_ms")
-
-  // Results
-  totalItems           Int                   @map("total_items")
-  successItems         Int                   @map("success_items")
-  failedItems          Int                   @map("failed_items")
-
-  createdAt            DateTime              @default(now()) @map("created_at")
-
-  @@index([semester], name: "idx_batch_log_semester")
-  @@index([createdAt], name: "idx_batch_log_created")
-  @@index([batchType], name: "idx_batch_log_type")
-  @@map("batch_processing_logs")
 }

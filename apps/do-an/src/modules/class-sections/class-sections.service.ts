@@ -1,10 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '@app/shared';
+import { PrismaService, REDIS_CLIENT, RegistrationRedisKey } from '@app/shared';
 import {
   ClassSectionStatus,
   ClassSectionType,
@@ -12,6 +14,7 @@ import {
   Prisma,
   SectionOpenGroup,
 } from '@prisma/client';
+import type Redis from 'ioredis';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { ClassSectionCsvRow } from './types/class-section-csv-row.type';
@@ -23,10 +26,35 @@ import { QueryClassSectionsDto } from './dto/query-class-sections.dto';
 import { CreateClassSectionDto } from './dto/create-class-section.dto';
 import { UpdateClassSectionDto } from './dto/update-class-section.dto';
 
+const CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS = 30 * 60;
+
+type ClassSectionLookupResponse = {
+  items: Array<
+    Prisma.ClassSectionGetPayload<{
+      include: {
+        course: {
+          select: { id: true; code: true; name: true; credits: true };
+        };
+      };
+    }>
+  >;
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 // noinspection JSNonASCIINames
 @Injectable()
 export class ClassSectionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ClassSectionsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) {}
 
   async importClassSections(file: UploadedCsvFile) {
     const text = file.buffer.toString('utf-8').replace(/^\uFEFF/, '');
@@ -104,6 +132,8 @@ export class ClassSectionsService {
         data,
         skipDuplicates: true,
       });
+
+      await this.invalidateSectionLookupCaches(data);
 
       return {
         fileName: file.originalname,
@@ -207,6 +237,186 @@ export class ClassSectionsService {
     return classSection;
   }
 
+  async findBySectionCode(semester: string, sectionCode: string) {
+    const normalizedSemester = semester?.trim();
+    const normalizedSectionCode = sectionCode?.trim();
+
+    if (!normalizedSemester || !normalizedSectionCode) {
+      throw new BadRequestException('semester and sectionCode are required');
+    }
+
+    const cached = await this.readSectionByCodeCache(
+      normalizedSemester,
+      normalizedSectionCode,
+    );
+    if (cached) {
+      return this.withCurrentRegisteredCounts(cached);
+    }
+
+    const items = await this.prisma.classSection.findMany({
+      where: {
+        semester: normalizedSemester,
+        sectionCode: normalizedSectionCode,
+      },
+      orderBy: [
+        { dayOfWeek: 'asc' },
+        { startPeriod: 'asc' },
+        { createdAt: 'asc' },
+      ],
+      include: {
+        course: {
+          select: { id: true, code: true, name: true, credits: true },
+        },
+      },
+    });
+
+    const response = this.toLookupResponse(items);
+    await this.writeSectionSlotsCache(items);
+    await this.writeSectionByCodeCache(
+      normalizedSemester,
+      normalizedSectionCode,
+      response,
+    );
+
+    return this.withCurrentRegisteredCounts(response);
+  }
+
+  private toLookupResponse(
+    items: ClassSectionLookupResponse['items'],
+  ): ClassSectionLookupResponse {
+    return {
+      items,
+      meta: {
+        page: 1,
+        limit: items.length,
+        total: items.length,
+        totalPages: items.length === 0 ? 0 : 1,
+      },
+    };
+  }
+
+  private async readSectionByCodeCache(
+    semester: string,
+    sectionCode: string,
+  ): Promise<ClassSectionLookupResponse | null> {
+    const key = RegistrationRedisKey.sectionByCode(semester, sectionCode);
+    const cached = await this.redis.get(key).catch((error) => {
+      this.logger.warn(
+        `[ClassSections] Redis lookup failed for ${key}: ${error.message}`,
+      );
+      return null;
+    });
+
+    if (!cached) return null;
+
+    try {
+      const parsed = JSON.parse(cached) as ClassSectionLookupResponse;
+      if (!Array.isArray(parsed.items) || !parsed.meta) {
+        await this.redis.del(key);
+        return null;
+      }
+      return parsed;
+    } catch {
+      await this.redis.del(key);
+      return null;
+    }
+  }
+
+  private async writeSectionByCodeCache(
+    semester: string,
+    sectionCode: string,
+    response: ClassSectionLookupResponse,
+  ) {
+    await this.redis
+      .set(
+        RegistrationRedisKey.sectionByCode(semester, sectionCode),
+        JSON.stringify(response),
+        'EX',
+        CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS,
+      )
+      .catch((error) => {
+        this.logger.warn(
+          `[ClassSections] Redis cache write failed for ${semester}/${sectionCode}: ${error.message}`,
+        );
+      });
+  }
+
+  private async writeSectionSlotsCache(
+    items: ClassSectionLookupResponse['items'],
+  ) {
+    if (items.length === 0) return;
+
+    const pipeline = this.redis.pipeline();
+    for (const item of items) {
+      pipeline.set(
+        RegistrationRedisKey.sectionSlots(item.id),
+        Math.max(item.maxCapacity - item.registeredCount, 0).toString(),
+        'EX',
+        CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS,
+      );
+    }
+    await pipeline.exec().catch((error) => {
+      this.logger.warn(
+        `[ClassSections] Redis slot cache write failed: ${error.message}`,
+      );
+    });
+  }
+
+  private async invalidateSectionLookupCaches(
+    refs: Array<{ semester: string; sectionCode: string; id?: string }>,
+  ) {
+    const keys = [
+      ...new Set(
+        refs.flatMap((ref) => [
+          RegistrationRedisKey.sectionByCode(ref.semester, ref.sectionCode),
+          ...(ref.id ? [RegistrationRedisKey.sectionSlots(ref.id)] : []),
+        ]),
+      ),
+    ];
+
+    if (keys.length === 0) return;
+
+    await this.redis.del(...keys).catch((error) => {
+      this.logger.warn(
+        `[ClassSections] Redis cache invalidation failed: ${error.message}`,
+      );
+    });
+  }
+
+  private async withCurrentRegisteredCounts(
+    response: ClassSectionLookupResponse,
+  ): Promise<ClassSectionLookupResponse> {
+    if (response.items.length === 0) return response;
+
+    const keys = response.items.map((item) =>
+      RegistrationRedisKey.sectionSlots(item.id),
+    );
+    const slotValues = await this.redis.mget(...keys).catch((error) => {
+      this.logger.warn(
+        `[ClassSections] Redis slot read failed: ${error.message}`,
+      );
+      return [];
+    });
+
+    if (slotValues.length === 0) return response;
+
+    return {
+      ...response,
+      items: response.items.map((item, index) => {
+        const rawRemaining = slotValues[index];
+        if (rawRemaining === null || rawRemaining === undefined) return item;
+
+        const remaining = Number.parseInt(rawRemaining, 10);
+        if (Number.isNaN(remaining)) return item;
+
+        return {
+          ...item,
+          registeredCount: Math.max(item.maxCapacity - remaining, 0),
+        };
+      }),
+    };
+  }
+
   async create(dto: CreateClassSectionDto) {
     const course = await this.prisma.course.findUnique({
       where: { code: dto.courseCode.trim() },
@@ -241,7 +451,7 @@ export class ClassSectionsService {
     }
 
     try {
-      return await this.prisma.classSection.create({
+      const created = await this.prisma.classSection.create({
         data: {
           sectionCode: dto.sectionCode.trim(),
           linkedSectionCode: dto.linkedSectionCode?.trim() || null,
@@ -268,6 +478,16 @@ export class ClassSectionsService {
           },
         },
       });
+
+      await this.invalidateSectionLookupCaches([
+        {
+          id: created.id,
+          semester: created.semester,
+          sectionCode: created.sectionCode,
+        },
+      ]);
+
+      return created;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -287,6 +507,8 @@ export class ClassSectionsService {
       where: { id },
       select: {
         id: true,
+        semester: true,
+        sectionCode: true,
         dayOfWeek: true,
         startPeriod: true,
         endPeriod: true,
@@ -345,7 +567,7 @@ export class ClassSectionsService {
     }
 
     try {
-      return await this.prisma.classSection.update({
+      const updated = await this.prisma.classSection.update({
         where: { id },
         data: {
           ...(dto.sectionCode !== undefined
@@ -397,6 +619,21 @@ export class ClassSectionsService {
           },
         },
       });
+
+      await this.invalidateSectionLookupCaches([
+        {
+          id: current.id,
+          semester: current.semester,
+          sectionCode: current.sectionCode,
+        },
+        {
+          id: updated.id,
+          semester: updated.semester,
+          sectionCode: updated.sectionCode,
+        },
+      ]);
+
+      return updated;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -410,10 +647,18 @@ export class ClassSectionsService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const current = await this.findOne(id);
 
     try {
-      return await this.prisma.classSection.delete({ where: { id } });
+      const deleted = await this.prisma.classSection.delete({ where: { id } });
+      await this.invalidateSectionLookupCaches([
+        {
+          id: current.id,
+          semester: current.semester,
+          sectionCode: current.sectionCode,
+        },
+      ]);
+      return deleted;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

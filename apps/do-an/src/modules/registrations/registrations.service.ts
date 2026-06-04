@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -82,7 +83,7 @@ export class RegistrationsService {
       },
     });
 
-    const bySectionCode = new Map<string, (typeof rows)>();
+    const bySectionCode = new Map<string, typeof rows>();
     for (const row of rows) {
       const group = bySectionCode.get(row.sectionCode) ?? [];
       group.push(row);
@@ -146,7 +147,10 @@ export class RegistrationsService {
     // Đã được xử lý deduplicate (Set) ở đầu hàm để hỗ trợ TKB nhiều buổi.
 
     // 8. Lấy danh sách lớp đã đăng ký thành công trong kỳ — dùng cho các check bên dưới
-    const existingItems = await this.findActiveRegistrationItems(userId, semester);
+    const existingItems = await this.findActiveRegistrationItems(
+      userId,
+      semester,
+    );
     const existingScheduleRows = existingItems
       .filter((item) => item.classSection !== null)
       .map((item) => ({
@@ -160,9 +164,7 @@ export class RegistrationsService {
 
     // 9. Sinh viên đã đăng ký môn này trong kỳ chưa?
     const existingCourseIds = new Set(
-      existingItems
-        .map((item) => item.classSection?.course.id)
-        .filter(Boolean),
+      existingItems.map((item) => item.classSection?.course.id).filter(Boolean),
     );
     const duplicateCourses = representativeSections.filter((s) =>
       existingCourseIds.has(s.courseId),
@@ -217,25 +219,66 @@ export class RegistrationsService {
 
     const batchId = randomUUID();
 
-    // Tạo batch + items trong DB trước khi publish (đảm bảo FK + idempotent)
-    await this.prisma.registrationBatch.create({
-      data: {
-        id: batchId,
-        userId,
-        semester,
-        type: RegistrationBatchType.CREATE,
-        status: RegistrationBatchStatus.PENDING,
-        totalItems: allRows.length,
-        items: {
-          createMany: {
-            data: allRows.map((row) => ({
-              classSectionId: row.id,
-              status: RegistrationBatchItemStatus.PENDING,
-            })),
+    // Reserve slot trước khi ghi DB để chặn ngay các request đến sau,
+    // tránh race condition trong khoảng thời gian DB đang bận.
+    const uniqueClassSectionIds = [...new Set(allRows.map((r) => r.id))];
+    if (uniqueClassSectionIds.length > 0) {
+      const pipeline = this.redis.pipeline();
+      for (const classSectionId of uniqueClassSectionIds) {
+        pipeline.decrby(RegistrationRedisKey.sectionSlots(classSectionId), 1);
+      }
+      await pipeline.exec().catch((err) => {
+        this.logger.warn(
+          `[CreateBatch] Redis pre-decrement failed: ${err.message}`,
+        );
+      });
+    }
+
+    // Ghi batch + items vào DB. Nếu lỗi thì rollback Redis (cộng lại slot).
+    try {
+      await this.prisma.registrationBatch.create({
+        data: {
+          id: batchId,
+          userId,
+          semester,
+          type: RegistrationBatchType.CREATE,
+          status: RegistrationBatchStatus.PENDING,
+          totalItems: allRows.length,
+          items: {
+            createMany: {
+              data: allRows.map((row) => ({
+                classSectionId: row.id,
+                status: RegistrationBatchItemStatus.PENDING,
+              })),
+            },
           },
         },
-      },
-    });
+      });
+    } catch (dbError) {
+      // Rollback: trả lại slot vừa trừ để tránh "ghost slot" treo mãi trên Redis.
+      // Nếu INCR cũng lỗi thì cronjob reconcile (mỗi 2 phút) sẽ tự dọn.
+      this.logger.error(
+        `[CreateBatch] DB write failed, rolling back Redis slots. batchId=${batchId} userId=${userId}`,
+        (dbError as Error).stack,
+      );
+      if (uniqueClassSectionIds.length > 0) {
+        const rollbackPipeline = this.redis.pipeline();
+        for (const classSectionId of uniqueClassSectionIds) {
+          rollbackPipeline.incrby(
+            RegistrationRedisKey.sectionSlots(classSectionId),
+            1,
+          );
+        }
+        await rollbackPipeline.exec().catch((rollbackErr) => {
+          this.logger.error(
+            `[CreateBatch] Redis rollback failed after DB error — reconcile sẽ tự sửa: ${rollbackErr.message}`,
+          );
+        });
+      }
+      throw new InternalServerErrorException(
+        'Không thể tạo batch đăng ký, vui lòng thử lại sau.',
+      );
+    }
 
     const payload: RegistrationBatchJobPayload = {
       type: RegistrationQueueEvent.CREATE_BATCH_REQUESTED,
@@ -280,7 +323,9 @@ export class RegistrationsService {
       registeredCount: number;
     }>,
   ): Promise<void> {
-    const uniqueSections = [...new Map(sections.map((s) => [s.id, s])).values()];
+    const uniqueSections = [
+      ...new Map(sections.map((s) => [s.id, s])).values(),
+    ];
     if (uniqueSections.length === 0) return;
 
     const keys = uniqueSections.map((section) =>
@@ -384,25 +429,66 @@ export class RegistrationsService {
 
     const batchId = randomUUID();
 
-    // Tạo batch + items trong DB trước khi publish (đảm bảo FK + idempotent)
-    await this.prisma.registrationBatch.create({
-      data: {
-        id: batchId,
-        userId,
-        semester,
-        type: RegistrationBatchType.CANCEL,
-        status: RegistrationBatchStatus.PENDING,
-        totalItems: classSectionIds.length,
-        items: {
-          createMany: {
-            data: classSectionIds.map((classSectionId) => ({
-              classSectionId,
-              status: RegistrationBatchItemStatus.PENDING,
-            })),
+    // Release slot trước khi ghi DB để nhả chỗ trống ngay lập tức cho người khác,
+    // tránh race condition trong khoảng thời gian DB đang bận.
+    const uniqueCancelSectionIds = [...new Set(classSectionIds)];
+    if (uniqueCancelSectionIds.length > 0) {
+      const pipeline = this.redis.pipeline();
+      for (const classSectionId of uniqueCancelSectionIds) {
+        pipeline.incrby(RegistrationRedisKey.sectionSlots(classSectionId), 1);
+      }
+      await pipeline.exec().catch((err) => {
+        this.logger.warn(
+          `[CancelBatch] Redis pre-increment failed: ${err.message}`,
+        );
+      });
+    }
+
+    // Ghi batch + items vào DB. Nếu lỗi thì rollback Redis (trừ lại slot vừa cộng).
+    try {
+      await this.prisma.registrationBatch.create({
+        data: {
+          id: batchId,
+          userId,
+          semester,
+          type: RegistrationBatchType.CANCEL,
+          status: RegistrationBatchStatus.PENDING,
+          totalItems: classSectionIds.length,
+          items: {
+            createMany: {
+              data: classSectionIds.map((classSectionId) => ({
+                classSectionId,
+                status: RegistrationBatchItemStatus.PENDING,
+              })),
+            },
           },
         },
-      },
-    });
+      });
+    } catch (dbError) {
+      // Rollback: trừ lại slot vừa cộng để tránh slot bị thừa trên Redis.
+      // Nếu DECR cũng lỗi thì cronjob reconcile (mỗi 2 phút) sẽ tự dọn.
+      this.logger.error(
+        `[CancelBatch] DB write failed, rolling back Redis slots. batchId=${batchId} userId=${userId}`,
+        (dbError as Error).stack,
+      );
+      if (uniqueCancelSectionIds.length > 0) {
+        const rollbackPipeline = this.redis.pipeline();
+        for (const classSectionId of uniqueCancelSectionIds) {
+          rollbackPipeline.decrby(
+            RegistrationRedisKey.sectionSlots(classSectionId),
+            1,
+          );
+        }
+        await rollbackPipeline.exec().catch((rollbackErr) => {
+          this.logger.error(
+            `[CancelBatch] Redis rollback failed after DB error — reconcile sẽ tự sửa: ${rollbackErr.message}`,
+          );
+        });
+      }
+      throw new InternalServerErrorException(
+        'Không thể tạo batch hủy đăng ký, vui lòng thử lại sau.',
+      );
+    }
 
     const payload: RegistrationBatchJobPayload = {
       type: RegistrationQueueEvent.CANCEL_BATCH_REQUESTED,

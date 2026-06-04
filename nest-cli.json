@@ -16,7 +16,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/do-an/src",
       "compilerOptions": {
-        "webpack": false,
+        "webpack": true,
         "tsConfigPath": "apps/do-an/tsconfig.app.json",
         "plugins": [
           {

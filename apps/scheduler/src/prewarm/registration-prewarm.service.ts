@@ -15,6 +15,16 @@ type RegistrationWindow = {
   slots: RegistrationSlot[];
 };
 
+type CachedSectionByCodeResponse = {
+  items: unknown[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 @Injectable()
 export class RegistrationPrewarmService {
   private readonly logger = new Logger(RegistrationPrewarmService.name);
@@ -25,7 +35,10 @@ export class RegistrationPrewarmService {
   ) {
     this.redis.on('ready', () => {
       this.healIfNeeded().catch((err: Error) =>
-        this.logger.error(`[Prewarm] Auto-heal error: ${err.message}`, err.stack),
+        this.logger.error(
+          `[Prewarm] Auto-heal error: ${err.message}`,
+          err.stack,
+        ),
       );
     });
   }
@@ -125,13 +138,18 @@ export class RegistrationPrewarmService {
     }
 
     const redisValues = await this.redis.mget(
-      ...sections.map((section) => RegistrationRedisKey.sectionSlots(section.id)),
+      ...sections.map((section) =>
+        RegistrationRedisKey.sectionSlots(section.id),
+      ),
     );
     const pipeline = this.redis.pipeline();
     let fixedCount = 0;
 
     sections.forEach((section, index) => {
-      const expected = Math.max(section.maxCapacity - section.registeredCount, 0);
+      const expected = Math.max(
+        section.maxCapacity - section.registeredCount,
+        0,
+      );
       const rawValue = redisValues[index];
       const actual = rawValue === null ? null : Number(rawValue);
 
@@ -141,14 +159,6 @@ export class RegistrationPrewarmService {
           RegistrationRedisKey.sectionSlots(section.id),
           expected.toString(),
           'EX',
-          PREWARM_CACHE_TTL_SECONDS,
-        );
-        pipeline.hset(RegistrationRedisKey.sectionInfo(section.id), {
-          maxCapacity: section.maxCapacity.toString(),
-          registeredCount: section.registeredCount.toString(),
-        });
-        pipeline.expire(
-          RegistrationRedisKey.sectionInfo(section.id),
           PREWARM_CACHE_TTL_SECONDS,
         );
       }
@@ -195,29 +205,26 @@ export class RegistrationPrewarmService {
     this.logger.log(`[Prewarm] Session info cached, TTL=${ttlSeconds}s`);
   }
 
-  // ─── Section slots + infos ─────────────────────────────────────────────────
+  // ─── Section slots + lookup-by-code cache ──────────────────────────────────
   // Data chỉ vài MB/kỳ → load 1 query, push 1 pipeline, không cần pagination.
 
   private async cacheSections(semester: string): Promise<void> {
     const sections = await this.prisma.classSection.findMany({
       where: { semester },
-      select: {
-        id: true,
-        courseId: true,
-        dayOfWeek: true,
-        timeOfDay: true,
-        startPeriod: true,
-        endPeriod: true,
-        timeRange: true,
-        weekRange: true,
-        sectionType: true,
-        requiresLab: true,
-        linkedSectionCode: true,
-        maxCapacity: true,
-        registeredCount: true,
+      orderBy: [
+        { sectionCode: 'asc' },
+        { dayOfWeek: 'asc' },
+        { startPeriod: 'asc' },
+        { createdAt: 'asc' },
+      ],
+      include: {
+        course: {
+          select: { id: true, code: true, name: true, credits: true },
+        },
       },
     });
 
+    const sectionsByCode = new Map<string, typeof sections>();
     const pipeline = this.redis.pipeline();
     for (const s of sections) {
       // slot key: số chỗ còn trống
@@ -228,28 +235,32 @@ export class RegistrationPrewarmService {
         PREWARM_CACHE_TTL_SECONDS,
       );
 
-      // info key: thông tin đầy đủ của lớp
-      const infoKey = RegistrationRedisKey.sectionInfo(s.id);
-      pipeline.hset(infoKey, {
-        courseId: s.courseId,
-        dayOfWeek: s.dayOfWeek?.toString() ?? '',
-        timeOfDay: s.timeOfDay ?? '',
-        startPeriod: s.startPeriod?.toString() ?? '',
-        endPeriod: s.endPeriod?.toString() ?? '',
-        timeRange: s.timeRange ?? '',
-        weekRange: s.weekRange ?? '',
-        sectionType: s.sectionType ?? '',
-        requiresLab: s.requiresLab ? '1' : '0',
-        linkedSectionCode: s.linkedSectionCode ?? '',
-        maxCapacity: s.maxCapacity.toString(),
-        registeredCount: s.registeredCount.toString(),
-      });
-      pipeline.expire(infoKey, PREWARM_CACHE_TTL_SECONDS);
+      const rows = sectionsByCode.get(s.sectionCode) ?? [];
+      rows.push(s);
+      sectionsByCode.set(s.sectionCode, rows);
+    }
+
+    for (const [sectionCode, items] of sectionsByCode) {
+      const response: CachedSectionByCodeResponse = {
+        items,
+        meta: {
+          page: 1,
+          limit: items.length,
+          total: items.length,
+          totalPages: items.length === 0 ? 0 : 1,
+        },
+      };
+      pipeline.set(
+        RegistrationRedisKey.sectionByCode(semester, sectionCode),
+        JSON.stringify(response),
+        'EX',
+        PREWARM_CACHE_TTL_SECONDS,
+      );
     }
     await pipeline.exec();
 
     this.logger.log(
-      `[Prewarm] Sections cached: ${sections.length} (slots + infos)`,
+      `[Prewarm] Sections cached: ${sections.length} rows, ${sectionsByCode.size} section codes`,
     );
   }
 

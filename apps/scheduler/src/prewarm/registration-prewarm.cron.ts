@@ -30,7 +30,7 @@ export class RegistrationPrewarmCron {
     }
   }
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron('*/2 * * * *') // Mỗi 2 phút — sync Redis slots với DB (worker không SET trực tiếp nữa)
   async reconcileRedisSlots(): Promise<void> {
     if (this.isReconciling) {
       this.logger.warn('[ReconcileCron] Previous run still in progress, skip');

@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -24,5 +24,13 @@ export class DashboardController {
   @ApiQuery({ name: 'semester', required: true, example: '20252' })
   getOverview(@Query('semester') semester: string) {
     return this.dashboardService.getOverview(semester);
+  }
+
+  @Post('reset')
+  @ApiOperation({
+    summary: '[Admin] Reset toàn bộ dữ liệu test (truncate batches, logs, outbox, reset sl_dk, xóa Redis RPS)',
+  })
+  resetTestData() {
+    return this.dashboardService.resetTestData();
   }
 }

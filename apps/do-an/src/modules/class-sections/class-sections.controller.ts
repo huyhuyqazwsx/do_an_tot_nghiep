@@ -68,6 +68,16 @@ export class ClassSectionsController {
     return this.classSectionsService.findAll(query);
   }
 
+  @Get('by-code/:sectionCode')
+  @ApiOperation({ summary: 'Lookup class sections by exact section code' })
+  @ApiOkResponse({ type: ClassSectionListResponseDto })
+  findBySectionCode(
+    @Param('sectionCode') sectionCode: string,
+    @Query('semester') semester: string,
+  ) {
+    return this.classSectionsService.findBySectionCode(semester, sectionCode);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get class section details by id' })
   @ApiOkResponse({ type: ClassSectionDetailResponseDto })

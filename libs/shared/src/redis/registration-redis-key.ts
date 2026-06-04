@@ -13,8 +13,9 @@ export const RegistrationRedisKey = {
   sectionSlots: (classSectionId: string) =>
     `reg:section:slots:${classSectionId}`,
 
-  /** Hash — thông tin lịch học: dayOfWeek, timeOfDay, startPeriod, endPeriod... — TTL 30 phút */
-  sectionInfo: (classSectionId: string) => `reg:section:info:${classSectionId}`,
+  /** JSON — response lookup chính xác theo mã lớp trong kỳ — TTL 30 phút */
+  sectionByCode: (semester: string, sectionCode: string) =>
+    `reg:section:code:${semester}:${sectionCode}`,
 } as const;
 
 /**
@@ -31,3 +32,22 @@ export const CourseRedisKey = {
   /** Pattern dùng để xóa cache courses khi có ghi dữ liệu */
   all: () => 'courses:*',
 } as const;
+
+/**
+ * Redis key cho batch processing metrics — thay thế bảng batch_processing_logs.
+ * Mỗi batch Worker ghi 1 Hash, TTL ngắn (2 phút). Dashboard đọc bằng SCAN + aggregate in-memory.
+ * Convention: batch:log:{semester}:{batchId}
+ */
+export const BatchLogRedisKey = {
+  /** Hash key cho 1 batch: fields = batchType, queueWaitMs, processingDurationMs,
+   *  totalItems, successItems, failedItems, createdAtMs */
+  entry: (semester: string, batchId: string) =>
+    `batch:log:${semester}:${batchId}`,
+
+  /** Glob pattern để SCAN tất cả log của 1 kỳ */
+  pattern: (semester: string) => `batch:log:${semester}:*`,
+
+  /** TTL mỗi entry (giây) — đủ cho window 10 phút + buffer */
+  TTL_SECONDS: 600,
+} as const;
+
