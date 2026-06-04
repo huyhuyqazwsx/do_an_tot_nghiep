@@ -18,7 +18,7 @@ export class CreateBatchHandler {
     private readonly prisma: PrismaService,
     private readonly helper: RegistrationHelperService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+  ) { }
 
   async handle(
     batchId: string,
@@ -64,35 +64,35 @@ export class CreateBatchHandler {
     );
     const sections: CreateBatchSectionInfo[] = hasPayloadForAllSections
       ? classSectionIds.map((classSectionId) => {
-          const item = payloadItemsBySectionId.get(classSectionId)!;
-          return {
-            id: item.classSectionId,
-            courseId: item.courseId,
-            dayOfWeek: item.dayOfWeek,
-            timeOfDay: item.timeOfDay,
-            startPeriod: item.startPeriod,
-            endPeriod: item.endPeriod,
-            course: {
-              code: item.courseCode,
-              name: item.courseName,
-              prerequisite: item.prerequisite,
-            },
-          };
-        })
-      : await this.prisma.classSection.findMany({
-          where: { id: { in: classSectionIds } },
-          select: {
-            id: true,
-            courseId: true,
-            dayOfWeek: true,
-            timeOfDay: true,
-            startPeriod: true,
-            endPeriod: true,
-            course: {
-              select: { code: true, name: true, prerequisite: true },
-            },
+        const item = payloadItemsBySectionId.get(classSectionId)!;
+        return {
+          id: item.classSectionId,
+          courseId: item.courseId,
+          dayOfWeek: item.dayOfWeek,
+          timeOfDay: item.timeOfDay,
+          startPeriod: item.startPeriod,
+          endPeriod: item.endPeriod,
+          course: {
+            code: item.courseCode,
+            name: item.courseName,
+            prerequisite: item.prerequisite,
           },
-        });
+        };
+      })
+      : await this.prisma.classSection.findMany({
+        where: { id: { in: classSectionIds } },
+        select: {
+          id: true,
+          courseId: true,
+          dayOfWeek: true,
+          timeOfDay: true,
+          startPeriod: true,
+          endPeriod: true,
+          course: {
+            select: { code: true, name: true, prerequisite: true },
+          },
+        },
+      });
     const sectionMap = new Map(sections.map((s) => [s.id, s]));
 
     let successCount = 0;

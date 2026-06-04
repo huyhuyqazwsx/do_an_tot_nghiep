@@ -2,9 +2,9 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService, type JwtPayload, REDIS_CLIENT } from '@app/shared';
 import { UserRole } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import type Redis from 'ioredis';
+import { verifyPassword } from '../../common/security/password-hash.util';
 
 // TODO: Xóa constant này sau khi đã seed tài khoản admin thật vào DB
 const SUPERADMIN_BYPASS_ID = '00000000-0000-0000-0000-000000000001';
@@ -15,7 +15,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) { }
+  ) {}
 
   async login(studentCode: string, password: string) {
     // TODO: Xóa bypass này sau khi đã seed tài khoản admin thật vào DB
@@ -53,7 +53,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Tài khoản không tồn tại');
     if (!user.isActive) throw new UnauthorizedException('Tài khoản bị khóa');
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await verifyPassword(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Sai mật khẩu');
 
     const sessionId = randomUUID();

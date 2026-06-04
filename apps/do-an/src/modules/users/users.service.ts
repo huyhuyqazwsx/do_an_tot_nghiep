@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@app/shared';
 import { Prisma, UserRole } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { hashPassword } from '../../common/security/password-hash.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -263,7 +263,7 @@ export class UsersService {
       studentCode: dto.studentCode.trim(),
       name: dto.name.trim(),
       email: dto.email.trim().toLowerCase(),
-      password: await bcrypt.hash(dto.password.trim(), 10),
+      password: hashPassword(dto.password.trim()),
       role: dto.role ?? UserRole.STUDENT,
       courseYear: dto.courseYear ?? null,
       department: dto.department?.trim() || null,
@@ -289,7 +289,7 @@ export class UsersService {
     }
 
     if (dto.password !== undefined) {
-      data.password = await bcrypt.hash(dto.password.trim(), 10);
+      data.password = hashPassword(dto.password.trim());
     }
 
     if (dto.role !== undefined) {
@@ -347,7 +347,7 @@ export class UsersService {
       studentCode,
       name,
       email,
-      password: await bcrypt.hash(password, 10),
+      password: hashPassword(password),
       role,
       courseYear,
       department,

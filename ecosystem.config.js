@@ -10,7 +10,7 @@ module.exports = {
     {
       name: 'do-an-worker',
       script: './dist/apps/worker/main.js',
-      instances: 7,
+      instances: 10,
       exec_mode: 'fork',
       watch: false,
     },

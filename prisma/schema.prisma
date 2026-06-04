@@ -109,6 +109,7 @@ model User {
   registrationBatches RegistrationBatch[]
 
   @@map("users")
+  @@index([studentCode], name: "idx_users_student_code")
 }
 
 // ============================================================

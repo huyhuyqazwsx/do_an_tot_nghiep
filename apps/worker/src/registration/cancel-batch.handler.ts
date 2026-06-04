@@ -17,7 +17,7 @@ export class CancelBatchHandler {
     private readonly prisma: PrismaService,
     private readonly helper: RegistrationHelperService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+  ) { }
 
   async handle(
     batchId: string,
