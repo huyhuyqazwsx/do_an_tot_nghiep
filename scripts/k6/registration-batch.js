@@ -10,7 +10,7 @@ const PASSWORD = __ENV.PASSWORD || "1";
 const SECTION_CODES_FILE =
   __ENV.SECTION_CODES_FILE || "./section-codes.json";
 const STUDENT_START = Number(__ENV.STUDENT_START || "20225331");
-const STUDENT_END = Number(__ENV.STUDENT_END || "20226331");
+const STUDENT_END = Number(__ENV.STUDENT_END || "20235331");
 const GROUP_SIZE = Number(__ENV.GROUP_SIZE || "100");
 const POLL_BATCH = (__ENV.POLL_BATCH || "true") !== "false";
 const CANCEL_AFTER_CREATE = (__ENV.CANCEL_AFTER_CREATE || "true") !== "false";

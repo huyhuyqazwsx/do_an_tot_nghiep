@@ -10,14 +10,14 @@
 @startuml ER_Diagram
 title Sơ đồ ER — Hệ thống Đăng ký Tín chỉ
 
-entity "students" as students {
+entity "users" as users {
   * id : UUID <<PK>>
   --
-  * student_id : VARCHAR(20) <<UNIQUE>>
+  * student_code : VARCHAR(20) <<UNIQUE>>
   * name : VARCHAR(200)
   * email : VARCHAR(200) <<UNIQUE>>
   * password : VARCHAR(255)
-  * program : VARCHAR(5)
+  role : ENUM(UserRole)
   course_year : INTEGER
   department : VARCHAR(100)
   is_active : BOOLEAN
@@ -31,10 +31,11 @@ entity "courses" as courses {
   * name : VARCHAR(300)
   english_name : VARCHAR(300)
   * credits : INTEGER
+  tuition_credits : NUMERIC(5,1)
   khoi_luong : VARCHAR(20)
   department : VARCHAR(100)
-  prerequisite : VARCHAR(20)
-  weight : INTEGER
+  prerequisite : TEXT
+  weight : NUMERIC(3,1)
 }
 
 entity "class_sections" as class_sections {
@@ -45,15 +46,15 @@ entity "class_sections" as class_sections {
   * course_id : UUID <<FK>>
   * semester : VARCHAR(10)
   thu : INTEGER
-  kip : VARCHAR(10)
+  kip : ENUM(ClassTimeOfDay)
   tiet_bd : INTEGER
   tiet_kt : INTEGER
   thoi_gian : VARCHAR(20)
   tuan : VARCHAR(50)
   phong : VARCHAR(50)
-  loai_lop : VARCHAR(20)
-  dat_mo : VARCHAR(5)
-  trang_thai : VARCHAR(50)
+  loai_lop : ENUM(ClassSectionType)
+  dat_mo : ENUM(SectionOpenGroup)
+  trang_thai : ENUM(ClassSectionStatus)
   can_tn : BOOLEAN
   ghi_chu : TEXT
   sl_max : INTEGER
@@ -66,21 +67,13 @@ entity "registration_batches" as reg_batches {
   --
   * user_id : UUID <<FK>>
   * semester : VARCHAR(10)
-  * type : VARCHAR(30)      /' CREATE | CANCEL '/
-  * status : VARCHAR(30)    /' PENDING | COMPLETED '/
+  * type : ENUM(RegistrationBatchType)
+  * status : ENUM(RegistrationBatchStatus)
   * total_items : INTEGER
-  created_at : TIMESTAMP
-  processed_at : TIMESTAMP
-}
-
-entity "registration_batches" as reg_batches {
-  * id : UUID <<PK>>
-  --
-  * user_id : UUID <<FK>>
-  * semester : VARCHAR(10)
-  * type : VARCHAR(30)
-  * status : VARCHAR(30)
-  * total_items : INTEGER
+  notification_status : ENUM(NotificationStatus)
+  notification_sent_at : TIMESTAMP
+  notification_retry_count : INTEGER
+  notification_error : TEXT
   created_at : TIMESTAMP
   processed_at : TIMESTAMP
 }
@@ -90,7 +83,7 @@ entity "registration_batch_items" as reg_batch_items {
   --
   * batch_id : UUID <<FK>>
   class_section_id : UUID <<FK>>
-  * status : VARCHAR(30)     /' PENDING | SUCCESS | FAILED '/
+  * status : ENUM(RegistrationBatchItemStatus)
   failure_reason : TEXT
   remaining_slots : INTEGER
   created_at : TIMESTAMP
@@ -100,58 +93,46 @@ entity "registration_batch_items" as reg_batch_items {
 entity "student_grades" as student_grades {
   * id : UUID <<PK>>
   --
-  * student_id : UUID <<FK>>
+  * user_id : UUID <<FK>>
   * course_id : UUID <<FK>>
   * semester : VARCHAR(10)
-  * grade_letter : VARCHAR(2)
+  * grade_letter : ENUM(GradeLetter)
   grade_point : NUMERIC(3,1)
   grade_number : NUMERIC(4,1)
   created_at : TIMESTAMP
 }
 
-entity "registration_sessions" as reg_sessions {
-  * id : UUID <<PK>>
+entity "system_settings" as sys_settings {
+  * id : INTEGER <<PK>>
   --
-  * semester : VARCHAR(10)
-  name : VARCHAR(100)
-  * open_at : TIMESTAMP
-  * close_at : TIMESTAMP
-  is_active : BOOLEAN
-  created_at : TIMESTAMP
+  * current_semester : VARCHAR(10)
+  * semester_start_date : VARCHAR(20)
+  * semester_end_date : VARCHAR(20)
+  * registration_open_at : TIMESTAMP
+  * registration_close_at : TIMESTAMP
+  * max_credits_per_semester : INTEGER
+  updated_at : TIMESTAMP
 }
 
 entity "registration_slots" as reg_slots {
   * id : UUID <<PK>>
   --
-  * session_id : UUID <<FK>>
+  * semester : VARCHAR(10)
   name : VARCHAR(100)
-  * student_filter : JSONB
-  * open_at : TIMESTAMP
-  * close_at : TIMESTAMP
-  * prewarm_at : TIMESTAMP
-  is_prewarmed : BOOLEAN
-  prewarmed_at : TIMESTAMP
+  * student_code_from : VARCHAR(20)
+  * student_code_to : VARCHAR(20)
+  * start_date : VARCHAR(10)
+  * end_date : VARCHAR(10)
+  * start_time : VARCHAR(5)
+  * end_time : VARCHAR(5)
   created_at : TIMESTAMP
-}
-
-entity "outbox" as outbox {
-  * id : UUID <<PK>>
-  --
-  * event_type : VARCHAR(50)
-  * payload : JSONB
-  * status : VARCHAR(20)
-  retry_count : INTEGER
-  created_at : TIMESTAMP
-  sent_at : TIMESTAMP
-  error : TEXT
 }
 
 ' Relationships
-students ||--o{ student_grades : "có kết quả"
+users ||--o{ student_grades : "có kết quả"
 courses ||--o{ student_grades : "thuộc môn"
 courses ||--o{ class_sections : "có lớp học phần"
-reg_sessions ||--o{ reg_slots : "có khung giờ"
-students ||--o{ reg_batches : "gửi batch"
+users ||--o{ reg_batches : "gửi batch"
 reg_batches ||--o{ reg_batch_items : "có items"
 reg_batch_items }o--|| class_sections : "trỏ đến"
 
@@ -162,22 +143,20 @@ reg_batch_items }o--|| class_sections : "trỏ đến"
 
 ## 2. Mô tả chi tiết các bảng
 
-### 2.1 Bảng `students` — Sinh viên
+### 2.1 Bảng `users` — Người dùng (Sinh viên & Admin)
 
 | Cột | Kiểu | Ràng buộc | Mô tả |
 |---|---|---|---|
-| `id` | UUID | PK, DEFAULT gen_random_uuid() | Khóa chính |
-| `student_id` | VARCHAR(20) | UNIQUE, NOT NULL | Mã số sinh viên (VD: 20215678) |
+| `id` | UUID | PK, DEFAULT | Khóa chính |
+| `student_code` | VARCHAR(20) | UNIQUE, NOT NULL | Mã số sinh viên (VD: 20215678) |
 | `name` | VARCHAR(200) | NOT NULL | Họ tên |
 | `email` | VARCHAR(200) | UNIQUE, NOT NULL | Email |
 | `password` | VARCHAR(255) | NOT NULL | Mật khẩu đã hash (bcrypt) |
-| `program` | VARCHAR(5) | NOT NULL | Chương trình: A / B / AB |
-| `course_year` | INTEGER | | Năm nhập học (VD: 2021 → K66) |
+| `role` | ENUM(UserRole) | DEFAULT STUDENT | STUDENT \| ADMIN |
+| `course_year` | INTEGER | | Năm nhập học |
 | `department` | VARCHAR(100) | | Viện/Khoa |
-| `is_active` | BOOLEAN | DEFAULT TRUE | Tài khoản còn hoạt động |
+| `is_active` | BOOLEAN | DEFAULT TRUE | Tài khoản hoạt động |
 | `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
-
-**Ghi chú:** `program` và `course_year` dùng để lọc sinh viên thuộc nhóm đăng ký nào khi hệ thống tạo `allowed:{slot_id}` trong Redis.
 
 ---
 
@@ -189,11 +168,12 @@ reg_batch_items }o--|| class_sections : "trỏ đến"
 | `code` | VARCHAR(20) | UNIQUE, NOT NULL | Mã học phần (VD: AC2070) |
 | `name` | VARCHAR(300) | NOT NULL | Tên môn học |
 | `english_name` | VARCHAR(300) | | Tên tiếng Anh |
-| `credits` | INTEGER | NOT NULL | Số tín chỉ |
+| `credits` | INTEGER | NOT NULL | Số tín chỉ học tập |
+| `tuition_credits` | NUMERIC(5,1) | | Số tín chỉ học phí |
 | `khoi_luong` | VARCHAR(20) | | Khối lượng (VD: 3(2-1-1-6)) |
 | `department` | VARCHAR(100) | | Viện/Khoa quản lý |
-| `prerequisite` | VARCHAR(20) | | Mã môn tiên quyết |
-| `weight` | INTEGER | DEFAULT 1 | Hệ số ưu tiên |
+| `prerequisite` | TEXT | | Mã môn tiên quyết |
+| `weight` | NUMERIC(3,1) | DEFAULT 1 | Hệ số ưu tiên |
 
 ---
 
@@ -207,54 +187,53 @@ reg_batch_items }o--|| class_sections : "trỏ đến"
 | `course_id` | UUID | FK → courses | Môn học |
 | `semester` | VARCHAR(10) | NOT NULL | Học kỳ (VD: 20252) |
 | `thu` | INTEGER | | Thứ trong tuần (2–7) |
-| `kip` | VARCHAR(10) | | Kíp học: Sáng / Chiều / Tối |
+| `kip` | ENUM(ClassTimeOfDay) | | Sáng \| Chiều \| Tối |
 | `tiet_bd` | INTEGER | | Tiết bắt đầu (1–6) |
 | `tiet_kt` | INTEGER | | Tiết kết thúc (1–6) |
 | `thoi_gian` | VARCHAR(20) | | Giờ học raw (VD: 0645-0910) |
 | `tuan` | VARCHAR(50) | | Tuần học (VD: 25-32,34-42) |
 | `phong` | VARCHAR(50) | | Phòng học |
-| `loai_lop` | VARCHAR(20) | | LT+BT / TN / ĐA / TT ... |
-| `dat_mo` | VARCHAR(5) | | Đợt mở: A / B / AB |
-| `trang_thai` | VARCHAR(50) | | Điều chỉnh ĐK / Hủy lớp ... |
+| `loai_lop` | ENUM(ClassSectionType)| | LT+BT \| TN \| ĐA \| TT ... |
+| `dat_mo` | ENUM(SectionOpenGroup) | | A \| B \| AB |
+| `trang_thai` | ENUM(ClassSectionStatus)| | Điều chỉnh ĐK \| Hủy lớp ... |
 | `can_tn` | BOOLEAN | DEFAULT FALSE | Bắt buộc đăng ký kèm lớp TN |
 | `ghi_chu` | TEXT | | Ghi chú |
 | `sl_max` | INTEGER | DEFAULT 0 | Sĩ số tối đa |
 | `sl_dk` | INTEGER | DEFAULT 0 | Số đã đăng ký |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
-
-**Ghi chú về `loai_lop`:**
-
-| Giá trị | Ý nghĩa |
-|---|---|
-| `LT+BT` | Lý thuyết + Bài tập (lớp chính) |
-| `TN` | Thí nghiệm / Thực hành |
-| `ĐA` | Đồ án |
-| `TT` | Thực tập |
-
-**Ghi chú về lớp kèm:**
-- Lớp `TN` có `ma_lop_kem` trỏ đến lớp `LT+BT` tương ứng
-- Lớp `LT+BT` có `can_tn = TRUE` → bắt buộc đăng ký kèm 1 lớp `TN` cùng môn
 
 ---
 
 ### 2.4 Bảng `registration_batches` — Batch đăng ký / hủy
-
-> Thay thế bảng `registrations`. Trạng thái đăng ký được reconstruct từ `registration_batch_items`.
 
 | Cột | Kiểu | Ràng buộc | Mô tả |
 |---|---|---|---|
 | `id` | UUID | PK | Khóa chính |
 | `user_id` | UUID | FK → users, NOT NULL | Sinh viên gửi batch |
 | `semester` | VARCHAR(10) | NOT NULL | Học kỳ |
-| `type` | VARCHAR(30) | NOT NULL | `CREATE` \| `CANCEL` |
-| `status` | VARCHAR(30) | NOT NULL | `PENDING` \| `COMPLETED` |
+| `type` | ENUM(RegistrationBatchType)| NOT NULL | `CREATE` \| `CANCEL` |
+| `status` | ENUM(RegistrationBatchStatus)| NOT NULL | `PENDING` \| `COMPLETED` |
 | `total_items` | INTEGER | NOT NULL | Tổng số lớp trong batch |
+| `notification_status` | ENUM(NotificationStatus)| DEFAULT PENDING| `PENDING` \| `SENT` \| `FAILED` |
+| `notification_sent_at`| TIMESTAMP | | Thời gian gửi mail thành công |
+| `notification_retry_count` | INTEGER | DEFAULT 0 | Số lần thử lại gửi mail |
+| `notification_error` | TEXT | | Lỗi gửi mail nếu có |
 | `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
 | `processed_at` | TIMESTAMP | | Thời điểm worker xử lý xong |
 
-**Ý nghĩa status:**
-- `PENDING` → API đã ghi nhận, đang chờ worker
-- `COMPLETED` → Worker đã xử lý xong (kết quả từng item xem qua `registration_batch_items`)
+---
+
+### 2.4b Bảng `registration_batch_items` — Item trong batch
+
+| Cột | Kiểu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `id` | UUID | PK | Khóa chính |
+| `batch_id` | UUID | FK → registration_batches | Batch chứa item |
+| `class_section_id` | UUID | FK → class_sections | Lớp học phần |
+| `status` | ENUM(RegistrationBatchItemStatus)| NOT NULL | `PENDING` \| `SUCCESS` \| `FAILED` \| `CANCELLED` |
+| `failure_reason` | TEXT | | Lý do thất bại |
+| `remaining_slots` | INTEGER | | Slot còn lại sau xử lý |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
+| `processed_at` | TIMESTAMP | | Thời điểm worker xử lý item |
 
 ---
 
@@ -263,141 +242,52 @@ reg_batch_items }o--|| class_sections : "trỏ đến"
 | Cột | Kiểu | Ràng buộc | Mô tả |
 |---|---|---|---|
 | `id` | UUID | PK | Khóa chính |
-| `student_id` | UUID | FK → students | Sinh viên |
+| `user_id` | UUID | FK → users | Sinh viên |
 | `course_id` | UUID | FK → courses | Môn học |
 | `semester` | VARCHAR(10) | NOT NULL | Học kỳ |
-| `grade_letter` | VARCHAR(2) | NOT NULL | Điểm chữ: A / B+ / B / C+ / C / D+ / D / F |
+| `grade_letter` | ENUM(GradeLetter) | NOT NULL | A+ \| A \| B+ \| B \| C+ \| C \| D+ \| D \| F |
 | `grade_point` | NUMERIC(3,1) | | Điểm thang 4 |
 | `grade_number` | NUMERIC(4,1) | | Điểm số 0–10 |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
-
-**Ghi chú:** Lưu dạng snapshot — học lại nhiều lần = nhiều bản ghi. Validate tiên quyết chỉ cần tồn tại ít nhất 1 bản ghi có `grade_letter != 'F'`.
-
-**Ràng buộc:** `UNIQUE(student_id, course_id, semester)`
 
 ---
 
-### 2.6 Bảng `outbox` — Hàng đợi gửi email
+### 2.6 Bảng `system_settings` — Cấu hình hệ thống (Singleton)
+
+| Cột | Kiểu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `id` | INTEGER | PK, DEFAULT 1 | Luôn bằng 1 |
+| `current_semester` | VARCHAR(10) | NOT NULL | Kỳ hiện tại |
+| `semester_start_date`| VARCHAR(20) | NOT NULL | Ngày bắt đầu kỳ học |
+| `semester_end_date` | VARCHAR(20) | NOT NULL | Ngày kết thúc kỳ học |
+| `registration_open_at`| TIMESTAMP | NOT NULL | Thời gian mở hệ thống ĐK |
+| `registration_close_at`| TIMESTAMP | NOT NULL | Thời gian đóng hệ thống ĐK |
+| `max_credits_per_semester`| INTEGER | NOT NULL | Giới hạn tín chỉ tối đa |
+
+---
+
+### 2.7 Bảng `registration_slots` — Khung giờ đăng ký
 
 | Cột | Kiểu | Ràng buộc | Mô tả |
 |---|---|---|---|
 | `id` | UUID | PK | Khóa chính |
-| `event_type` | VARCHAR(50) | NOT NULL | REGISTRATION_SUCCESS / REGISTRATION_FAILED / REGISTRATION_CANCELLED |
-| `payload` | JSONB | NOT NULL | `{ studentId, studentEmail, studentName, courseName, maLop, semester }` |
-| `status` | VARCHAR(20) | DEFAULT 'PENDING' | PENDING / SENT / FAILED |
-| `retry_count` | INTEGER | DEFAULT 0 | Số lần thử lại |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
-| `sent_at` | TIMESTAMP | | Thời điểm gửi thành công |
-| `error` | TEXT | | Thông tin lỗi nếu thất bại |
-
-**Ghi chú:** Outbox được INSERT trong cùng transaction với đăng ký → đảm bảo atomic: đăng ký thành công thì chắc chắn có email, không bao giờ gửi email khi đăng ký thất bại.
-
----
-
-### 2.7 Bảng `registration_sessions` — Phiên đăng ký
-
-| Cột | Kiểu | Ràng buộc | Mô tả |
-|---|---|---|---|
-| `id` | UUID | PK | Khóa chính |
-| `semester` | VARCHAR(10) | NOT NULL | Học kỳ |
-| `name` | VARCHAR(100) | | Tên phiên (VD: "Đợt 1 - K66") |
-| `open_at` | TIMESTAMP | NOT NULL | Thời điểm mở |
-| `close_at` | TIMESTAMP | NOT NULL | Thời điểm đóng |
-| `is_active` | BOOLEAN | DEFAULT FALSE | Phiên đang mở |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
+| `semester` | VARCHAR(10) | NOT NULL | Kỳ học áp dụng |
+| `name` | VARCHAR(100) | | Tên khung giờ |
+| `student_code_from` | VARCHAR(20) | NOT NULL | MSSV từ... |
+| `student_code_to` | VARCHAR(20) | NOT NULL | MSSV đến... |
+| `start_date` | VARCHAR(10) | NOT NULL | Ngày bắt đầu (YYYY-MM-DD) |
+| `end_date` | VARCHAR(10) | NOT NULL | Ngày kết thúc (YYYY-MM-DD) |
+| `start_time` | VARCHAR(5) | NOT NULL | Giờ bắt đầu trong ngày (HH:mm) |
+| `end_time` | VARCHAR(5) | NOT NULL | Giờ kết thúc trong ngày (HH:mm) |
 
 ---
 
-### 2.8 Bảng `registration_slots` — Khung giờ đăng ký
-
-| Cột | Kiểu | Ràng buộc | Mô tả |
-|---|---|---|---|
-| `id` | UUID | PK | Khóa chính |
-| `session_id` | UUID | FK → registration_sessions | Phiên đăng ký |
-| `name` | VARCHAR(100) | | Tên khung giờ (VD: "K66 - ELITECH - Đợt 1") |
-| `student_filter` | JSONB | NOT NULL | Điều kiện lọc SV: `{ course_year: 2021, program: "A" }` |
-| `open_at` | TIMESTAMP | NOT NULL | Thời điểm mở khung giờ |
-| `close_at` | TIMESTAMP | NOT NULL | Thời điểm đóng khung giờ |
-| `prewarm_at` | TIMESTAMP | NOT NULL | Thời điểm pre-warm Redis (thường = open_at - 15 phút) |
-| `is_prewarmed` | BOOLEAN | DEFAULT FALSE | Đã pre-warm chưa |
-| `prewarmed_at` | TIMESTAMP | | Thời điểm pre-warm hoàn thành |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
-
----
-
-## 3. Indexes
-
-| Index | Bảng | Cột | Mục đích |
-|---|---|---|---|
-| `idx_class_sections_course` | class_sections | course_id | Tìm lớp theo môn |
-| `idx_class_sections_semester` | class_sections | semester | Tìm lớp theo kỳ |
-| `idx_class_sections_ma_lop` | class_sections | ma_lop | Lookup nhanh theo mã lớp |
-| `idx_registrations_student` | registrations | student_id | Danh sách đăng ký của SV |
-| `idx_registrations_section` | registrations | class_section_id | SV đăng ký lớp nào |
-| `idx_registrations_status` | registrations | status | Lọc theo trạng thái |
-| `idx_grades_student_course` | student_grades | student_id, course_id | Validate tiên quyết |
-| `idx_outbox_status` | outbox | status | Lọc PENDING để gửi email |
-| `idx_outbox_created` | outbox | created_at | Sắp xếp theo thời gian |
-
----
-
-## 4. Quan hệ giữa các bảng
-
-```
-users ─────────────────────┬──── registrations ─────┬──── class_sections ──── courses
-                           │                         │
-                           ├──── student_grades ─────┘
-                           │
-                           └──── registration_batches ──── registration_batch_items
-                                                                 │
-                                              ┌──────────────────┤
-                                              │                  │
-                                         registrations    class_sections
-
-registration_sessions ──── registration_slots
-
-outbox (độc lập, liên kết qua payload JSONB)
-```
-
----
-
-## 5. Các ràng buộc nghiệp vụ quan trọng
+## 3. Các ràng buộc nghiệp vụ quan trọng
 
 | Ràng buộc | Bảng | Cách thực hiện |
 |---|---|---|
-| 1 SV 1 lớp chỉ 1 batch item SUCCESS dạng CREATE | registration_batch_items | Logic reconstruct: lấy latest item theo (userId, classSectionId) |
 | Không vượt sĩ số tối đa | class_sections | `UPDATE ... WHERE sl_dk < sl_max` trong transaction |
-| Môn tiên quyết phải đã qua | student_grades | Worker query trước khi UPDATE |
-| Không trùng lịch | — | In-memory check trong Worker |
-| Lớp TN bắt buộc khi requiresLab=true | class_sections | API validate trước khi đẩy queue |
-| Đăng ký + email là atomic | registration_batch_items + outbox | Cùng 1 DB transaction |
-| Không có 2 batch PENDING cùng lúc | registration_batches | API check trước khi tạo batch |
-| Cancel idempotent | registration_batch_items | Worker check latest item type trước khi xử lý |
-
----
-
-## 6. Bảng `registration_batches` — Batch đăng ký/hủy
-
-| Cột | Kiểu | Ràng buộc | Mô tả |
-|---|---|---|---|
-| `id` | UUID | PK | Khóa chính |
-| `user_id` | UUID | FK → users | Sinh viên gửi batch |
-| `semester` | VARCHAR(10) | NOT NULL | Học kỳ |
-| `type` | VARCHAR(30) | NOT NULL | `CREATE` \| `CANCEL` |
-| `status` | VARCHAR(30) | NOT NULL | `PENDING` \| `PROCESSING` \| `COMPLETED` \| `PARTIAL_FAILED` \| `FAILED` |
-| `total_items` | INTEGER | NOT NULL | Tổng số lớp trong batch |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
-| `processed_at` | TIMESTAMP | | Thời điểm worker xử lý xong |
-
-### 2.7b Bảng `registration_batch_items` — Item trong batch
-
-| Cột | Kiểu | Ràng buộc | Mô tả |
-|---|---|---|---|
-| `id` | UUID | PK | Khóa chính |
-| `batch_id` | UUID | FK → registration_batches | Batch chứa item |
-| `class_section_id` | UUID | FK → class_sections (nullable) | Lớp học phần |
-| `status` | VARCHAR(30) | NOT NULL | `PENDING` \| `SUCCESS` \| `FAILED` |
-| `failure_reason` | TEXT | | Lý do thất bại (nếu FAILED) |
-| `remaining_slots` | INTEGER | | Slot còn lại sau khi xử lý |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo |
-| `processed_at` | TIMESTAMP | | Thời điểm worker xử lý item này |
+| Môn tiên quyết | student_grades | Lấy khóa ngoại hoặc check in-memory |
+| Không trùng lịch | — | In-memory check lúc API tiếp nhận |
+| Lớp TN đi kèm lý thuyết | class_sections | API validate `requiresLab` |
+| Đăng ký và Thông báo | reg_batches | Worker xử lý xong cập nhật trạng thái Notification |
+| Khung giờ phân loại sinh viên | reg_slots | Check `student_code` nằm trong khoảng `_from` và `_to` |
