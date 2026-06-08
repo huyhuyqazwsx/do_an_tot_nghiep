@@ -3,17 +3,9 @@ import { PrismaService } from '@app/shared';
 import { REDIS_CLIENT } from '@app/shared';
 import { RegistrationRedisKey } from '@app/shared';
 import Redis from 'ioredis';
-import type { RegistrationSlot, SystemSetting } from '@prisma/client';
+import type { SystemSetting } from '@prisma/client';
 
 const PREWARM_CACHE_TTL_SECONDS = 30 * 60;
-
-type RegistrationWindow = {
-  id: string;
-  semester: string;
-  openAt: Date;
-  closeAt: Date;
-  slots: RegistrationSlot[];
-};
 
 type CachedSectionByCodeResponse = {
   items: unknown[];
@@ -43,41 +35,14 @@ export class RegistrationPrewarmService {
     });
   }
 
-  async prewarmCurrentSettings(
-    settings: SystemSetting,
-    slots?: RegistrationSlot[],
-  ): Promise<void> {
-    const semester = settings.currentSemester;
-    const window: RegistrationWindow = {
-      id: `settings-${semester}`,
-      semester,
-      openAt: settings.registrationOpenAt,
-      closeAt: settings.registrationCloseAt,
-      slots:
-        slots ??
-        (await this.prisma.registrationSlot.findMany({
-          where: { semester },
-        })),
-    };
-
-    await this.prewarmWindow(window);
+  async prewarmCurrentSettings(settings: SystemSetting): Promise<void> {
+    await this.prewarmSemester(settings.currentSemester);
   }
 
-  async prewarmWindow(window: RegistrationWindow): Promise<void> {
-    const { semester } = window;
-    this.logger.log(
-      `[Prewarm] Start — semester=${semester} windowId=${window.id}`,
-    );
+  async prewarmSemester(semester: string): Promise<void> {
+    this.logger.log(`[Prewarm] Start — semester=${semester}`);
 
-    await this.cacheSessionInfo(window);
     await this.cacheSections(semester);
-    await this.cacheSlotAllowed(window.slots);
-
-    // Đánh dấu tất cả slot đã prewarm
-    await this.prisma.registrationSlot.updateMany({
-      where: { semester },
-      data: { isPrewarmed: true, prewarmedAt: new Date() },
-    });
 
     this.logger.log(`[Prewarm] Done — semester=${semester}`);
   }
@@ -96,8 +61,20 @@ export class RegistrationPrewarmService {
       return;
     }
 
-    const redisKey = RegistrationRedisKey.session(settings.currentSemester);
-    const exists = await this.redis.exists(redisKey);
+    const section = await this.prisma.classSection.findFirst({
+      where: { semester: settings.currentSemester },
+      select: { id: true },
+      orderBy: { sectionCode: 'asc' },
+    });
+    if (!section) {
+      this.logger.log(
+        `[Prewarm] No class sections for semester ${settings.currentSemester} — heal skipped`,
+      );
+      return;
+    }
+
+    const sectionSlotsKey = RegistrationRedisKey.sectionSlots(section.id);
+    const exists = await this.redis.exists(sectionSlotsKey);
     if (exists) {
       this.logger.log(
         `[Prewarm] Redis HIT for semester ${settings.currentSemester} — heal skipped`,
@@ -177,34 +154,6 @@ export class RegistrationPrewarmService {
     );
   }
 
-  // ─── Session info ───────────────────────────────────────────────────────────
-
-  private async cacheSessionInfo(session: RegistrationWindow): Promise<void> {
-    const ttlSeconds = Math.min(
-      Math.floor((session.closeAt.getTime() - Date.now()) / 1000),
-      PREWARM_CACHE_TTL_SECONDS,
-    );
-    if (ttlSeconds <= 0) {
-      this.logger.warn(`[Prewarm] Session ${session.id} already closed, skip`);
-      return;
-    }
-
-    await this.redis.set(
-      RegistrationRedisKey.session(session.semester),
-      JSON.stringify({
-        id: session.id,
-        semester: session.semester,
-        openAt: session.openAt.toISOString(),
-        closeAt: session.closeAt.toISOString(),
-        slotIds: session.slots.map((s) => s.id),
-      }),
-      'EX',
-      ttlSeconds,
-    );
-
-    this.logger.log(`[Prewarm] Session info cached, TTL=${ttlSeconds}s`);
-  }
-
   // ─── Section slots + lookup-by-code cache ──────────────────────────────────
   // Data chỉ vài MB/kỳ → load 1 query, push 1 pipeline, không cần pagination.
 
@@ -218,9 +167,7 @@ export class RegistrationPrewarmService {
         { createdAt: 'asc' },
       ],
       include: {
-        course: {
-          select: { id: true, code: true, name: true, credits: true },
-        },
+        course: true,
       },
     });
 
@@ -262,31 +209,5 @@ export class RegistrationPrewarmService {
     this.logger.log(
       `[Prewarm] Sections cached: ${sections.length} rows, ${sectionsByCode.size} section codes`,
     );
-  }
-
-  // ─── Slot allowed (SV được phép theo khung giờ) ────────────────────────────
-
-  private async cacheSlotAllowed(slots: RegistrationSlot[]): Promise<void> {
-    for (const slot of slots) {
-      const filter = slot.studentFilter as Record<string, unknown>;
-      const where: Record<string, unknown> = { isActive: true };
-      if (filter['courseYear']) where['courseYear'] = filter['courseYear'];
-      if (filter['department']) where['department'] = filter['department'];
-
-      const users = await this.prisma.user.findMany({
-        where,
-        select: { id: true },
-      });
-
-      if (users.length === 0) continue;
-
-      const key = RegistrationRedisKey.slotAllowed(slot.id);
-      const pipeline = this.redis.pipeline();
-      pipeline.sadd(key, ...users.map((u) => u.id));
-      pipeline.expire(key, PREWARM_CACHE_TTL_SECONDS);
-      await pipeline.exec();
-
-      this.logger.log(`[Prewarm] Slot ${slot.id}: ${users.length} users`);
-    }
   }
 }

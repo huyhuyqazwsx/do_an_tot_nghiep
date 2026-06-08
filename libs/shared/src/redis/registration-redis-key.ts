@@ -3,11 +3,11 @@
  * Convention: reg:{domain}:{...ids}
  */
 export const RegistrationRedisKey = {
-  /** JSON: { id, semester, openAt, closeAt, slotIds[] } — TTL 30 phút */
-  session: (semester: string) => `reg:session:${semester}`,
+  /** JSON: SystemSettings singleton — cache chung cho các API instances */
+  settings: () => 'reg:settings',
 
-  /** Set<userId> — SV được phép vào slot này — TTL 30 phút */
-  slotAllowed: (slotId: string) => `reg:slot:allowed:${slotId}`,
+  /** JSON: RegistrationSlot[] theo kỳ — TTL 30 phút */
+  registrationSlots: (semester: string) => `reg:slots:${semester}`,
 
   /** String (integer) — slot còn lại của lớp học phần — TTL 30 phút */
   sectionSlots: (classSectionId: string) =>
@@ -16,6 +16,12 @@ export const RegistrationRedisKey = {
   /** JSON — response lookup chính xác theo mã lớp trong kỳ — TTL 30 phút */
   sectionByCode: (semester: string, sectionCode: string) =>
     `reg:section:code:${semester}:${sectionCode}`,
+
+  /** JSON — response danh sách lớp theo filter/phân trang — TTL 30 phút */
+  sectionList: (hash: string) => `reg:section:list:${hash}`,
+
+  /** Pattern dùng để xóa cache danh sách lớp khi có ghi dữ liệu */
+  sectionListAll: () => 'reg:section:list:*',
 } as const;
 
 /**
@@ -50,4 +56,3 @@ export const BatchLogRedisKey = {
   /** TTL mỗi entry (giây) — đủ cho window 10 phút + buffer */
   TTL_SECONDS: 600,
 } as const;
-

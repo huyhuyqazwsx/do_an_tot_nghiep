@@ -69,17 +69,23 @@ export class DashboardService {
       }),
 
       // 5. Tổng batch đã gửi
-      this.prisma.registrationBatch.count({ where: { semester } }),
+      this.prisma.registrationBatch.count({
+        where: { semester, type: RegistrationBatchType.CREATE },
+      }),
 
       // 6. Batch đang xử lý (PENDING)
       this.prisma.registrationBatch.count({
-        where: { semester, status: RegistrationBatchStatus.PENDING },
+        where: {
+          semester,
+          type: RegistrationBatchType.CREATE,
+          status: RegistrationBatchStatus.PENDING,
+        },
       }),
 
       // 7. Đếm batch items theo status
       this.prisma.registrationBatchItem.groupBy({
         by: ['status'],
-        where: { batch: { semester } },
+        where: { batch: { semester, type: RegistrationBatchType.CREATE } },
         _count: { id: true },
       }),
 
@@ -88,7 +94,7 @@ export class DashboardService {
         where: {
           status: RegistrationBatchItemStatus.FAILED,
           processedAt: { gte: failuresFrom },
-          batch: { semester },
+          batch: { semester, type: RegistrationBatchType.CREATE },
         },
       }),
 
@@ -300,13 +306,12 @@ export class DashboardService {
 
   /**
    * Reset toàn bộ dữ liệu test:
-   * - TRUNCATE các bảng batch_processing_logs, outbox, registration_batch_items, registration_batches
+   * - TRUNCATE các bảng registration_batch_items, registration_batches
    * - UPDATE class_sections SET sl_dk = 0
    * - Xóa tất cả Redis RPS bucket keys của 5 phút vừa rồi
    */
   async resetTestData(): Promise<{ message: string; redisKeysDeleted: number }> {
     // 1. Reset DB (batch_processing_logs đã chuyển sang Redis, không cần TRUNCATE nữa)
-    await this.prisma.$executeRaw`TRUNCATE TABLE "outbox" CASCADE`;
     await this.prisma.$executeRaw`TRUNCATE TABLE "registration_batch_items" CASCADE`;
     await this.prisma.$executeRaw`TRUNCATE TABLE "registration_batches" CASCADE`;
     await this.prisma.$executeRaw`UPDATE "class_sections" SET "sl_dk" = 0`;
@@ -394,6 +399,7 @@ export class DashboardService {
     for (const entry of entries) {
       const createdAtMs = Number(entry['createdAtMs'] ?? 0);
       if (createdAtMs < cutoffMs) continue;
+      if (entry['batchType'] !== RegistrationBatchType.CREATE) continue;
 
       totalItems += Number(entry['totalItems'] ?? 0);
       successItems += Number(entry['successItems'] ?? 0);

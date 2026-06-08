@@ -120,19 +120,6 @@ export class CreateBatchHandler {
             item.classSectionId!,
           );
 
-          await tx.outbox.create({
-            data: {
-              eventType: 'REGISTRATION_SUCCESS',
-              payload: {
-                userId,
-                classSectionId: item.classSectionId,
-                courseCode: section.course.code,
-                courseName: section.course.name,
-                semester,
-              },
-            },
-          });
-
           await tx.registrationBatchItem.update({
             where: { id: item.id },
             data: {

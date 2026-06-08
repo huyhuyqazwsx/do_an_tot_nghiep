@@ -75,17 +75,6 @@ export class CancelBatchHandler {
             item.classSectionId!,
           );
 
-          await tx.outbox.create({
-            data: {
-              eventType: 'REGISTRATION_CANCELLED',
-              payload: {
-                userId,
-                classSectionId: item.classSectionId,
-                semester,
-              },
-            },
-          });
-
           // Cập nhật item đăng ký gốc → CANCELLED
           await tx.registrationBatchItem.update({
             where: { id: sourceItemId },

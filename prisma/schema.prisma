@@ -61,12 +61,6 @@ enum GradeLetter {
   F
 }
 
-enum OutboxEventType {
-  REGISTRATION_SUCCESS
-  REGISTRATION_FAILED
-  REGISTRATION_CANCELLED
-}
-
 enum RegistrationBatchType {
   CREATE
   CANCEL
@@ -84,7 +78,7 @@ enum RegistrationBatchItemStatus {
   FAILED
 }
 
-enum OutboxStatus {
+enum NotificationStatus {
   PENDING
   SENT
   FAILED
@@ -108,8 +102,8 @@ model User {
   grades              StudentGrade[]
   registrationBatches RegistrationBatch[]
 
-  @@map("users")
   @@index([studentCode], name: "idx_users_student_code")
+  @@map("users")
 }
 
 // ============================================================
@@ -190,12 +184,17 @@ model RegistrationBatch {
   totalItems  Int                     @map("total_items")
   createdAt   DateTime                @default(now()) @map("created_at")
   processedAt DateTime?               @map("processed_at")
+  notificationStatus     NotificationStatus @default(PENDING) @map("notification_status")
+  notificationSentAt     DateTime?          @map("notification_sent_at")
+  notificationRetryCount Int                @default(0) @map("notification_retry_count")
+  notificationError      String?            @map("notification_error") @db.Text
 
   user  User                    @relation(fields: [userId], references: [id])
   items RegistrationBatchItem[]
 
   @@index([userId, createdAt(sort: Desc)], name: "idx_reg_batches_user_created")
   @@index([userId, semester, status], name: "idx_reg_batches_user_semester_status")
+  @@index([semester, status, notificationStatus], name: "idx_reg_batches_notification")
   @@index([semester], name: "idx_reg_batches_semester")
   @@map("registration_batches")
 }
@@ -245,19 +244,18 @@ model StudentGrade {
 // REGISTRATION SLOTS
 // ============================================================
 model RegistrationSlot {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  semester      String    @db.VarChar(10)
-  name          String?   @db.VarChar(100)
-  studentFilter Json      @map("student_filter") @db.JsonB
-  // { course_year: 2021 } or { department: "CNTT" }
-  openAt        DateTime  @map("open_at")
-  closeAt       DateTime  @map("close_at")
-  prewarmAt     DateTime  @map("prewarm_at") // usually = open_at - 15 minutes
-  isPrewarmed   Boolean   @default(false) @map("is_prewarmed")
-  prewarmedAt   DateTime? @map("prewarmed_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  semester        String   @db.VarChar(10)
+  name            String?  @db.VarChar(100)
+  studentCodeFrom String   @map("student_code_from") @db.VarChar(20)
+  studentCodeTo   String   @map("student_code_to") @db.VarChar(20)
+  startDate       String   @map("start_date") @db.VarChar(10)
+  endDate         String   @map("end_date") @db.VarChar(10)
+  startTime       String   @map("start_time") @db.VarChar(5)
+  endTime         String   @map("end_time") @db.VarChar(5)
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  @@index([semester], name: "idx_registration_slots_semester")
+  @@index([semester, studentCodeFrom, studentCodeTo, startDate, endDate, startTime, endTime], name: "idx_registration_slots_semester_student_time")
   @@map("registration_slots")
 }
 
@@ -275,25 +273,4 @@ model SystemSetting {
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
-}
-
-// ============================================================
-// OUTBOX - ASYNC EMAIL DELIVERY
-// ============================================================
-model Outbox {
-  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventType  OutboxEventType @map("event_type")
-  // REGISTRATION_SUCCESS | REGISTRATION_FAILED | REGISTRATION_CANCELLED
-  payload    Json            @db.JsonB
-  // { studentId, studentEmail, studentName, courseName, sectionCode, semester }
-  status     OutboxStatus    @default(PENDING)
-  // PENDING | SENT | FAILED
-  retryCount Int             @default(0) @map("retry_count")
-  createdAt  DateTime        @default(now()) @map("created_at")
-  sentAt     DateTime?       @map("sent_at")
-  error      String?
-
-  @@index([status], name: "idx_outbox_status")
-  @@index([createdAt], name: "idx_outbox_created")
-  @@map("outbox")
 }

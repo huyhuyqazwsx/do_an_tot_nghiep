@@ -5,6 +5,8 @@ import { UserRole } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import type Redis from 'ioredis';
 import { verifyPassword } from '../../common/security/password-hash.util';
+import { RegistrationSlotsService } from '../registration-slots/registration-slots.service';
+import { SettingsService } from '../settings/settings.service';
 
 // TODO: Xóa constant này sau khi đã seed tài khoản admin thật vào DB
 const SUPERADMIN_BYPASS_ID = '00000000-0000-0000-0000-000000000001';
@@ -14,6 +16,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly settingsService: SettingsService,
+    private readonly registrationSlotsService: RegistrationSlotsService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
@@ -55,6 +59,20 @@ export class AuthService {
 
     const isMatch = await verifyPassword(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Sai mật khẩu');
+
+    if (user.role === UserRole.STUDENT) {
+      const { currentSemester } = await this.settingsService.getAll();
+      try {
+        await this.registrationSlotsService.assertStudentCanRegister(
+          currentSemester,
+          user.studentCode,
+        );
+      } catch (error) {
+        throw new UnauthorizedException(
+          error instanceof Error ? error.message : 'Chưa đến khung giờ đăng ký',
+        );
+      }
+    }
 
     const sessionId = randomUUID();
     const payload: JwtPayload = {

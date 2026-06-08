@@ -28,7 +28,7 @@ export class DashboardController {
 
   @Post('reset')
   @ApiOperation({
-    summary: '[Admin] Reset toàn bộ dữ liệu test (truncate batches, logs, outbox, reset sl_dk, xóa Redis RPS)',
+    summary: '[Admin] Reset toàn bộ dữ liệu test (truncate batches, reset sl_dk, xóa Redis RPS)',
   })
   resetTestData() {
     return this.dashboardService.resetTestData();

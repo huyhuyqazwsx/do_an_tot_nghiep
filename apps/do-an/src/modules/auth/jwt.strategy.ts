@@ -5,23 +5,18 @@ import {
   Strategy,
   StrategyOptionsWithoutRequest,
 } from 'passport-jwt';
-import { Request } from 'express';
-import { REDIS_CLIENT } from '../redis/redis.module';
+import type { Request } from 'express';
+import {
+  REDIS_CLIENT,
+  type JwtPayload,
+} from '@app/shared';
 import { UserRole } from '@prisma/client';
-
-interface RedisClient {
-  get(key: string): Promise<string | null>;
-}
+import type Redis from 'ioredis';
+import { RegistrationSlotsService } from '../registration-slots/registration-slots.service';
+import { SettingsService } from '../settings/settings.service';
 
 interface ExtractJwtType {
   fromAuthHeaderAsBearerToken: () => (req: Request) => string | null;
-}
-
-export interface JwtPayload {
-  sub: string;
-  studentCode: string;
-  role: UserRole;
-  sessionId: string;
 }
 
 const JwtPassportStrategy = PassportStrategy(Strategy) as unknown as new (
@@ -30,7 +25,11 @@ const JwtPassportStrategy = PassportStrategy(Strategy) as unknown as new (
 
 @Injectable()
 export class JwtStrategy extends JwtPassportStrategy {
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: RedisClient) {
+  constructor(
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly settingsService: SettingsService,
+    private readonly registrationSlotsService: RegistrationSlotsService,
+  ) {
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       throw new Error('JWT_SECRET is not defined');
@@ -56,6 +55,20 @@ export class JwtStrategy extends JwtPassportStrategy {
 
     if (!activeSessionId || activeSessionId !== payload.sessionId) {
       throw new UnauthorizedException('Phiên đăng nhập không còn hiệu lực');
+    }
+
+    if (payload.role === UserRole.STUDENT) {
+      const { currentSemester } = await this.settingsService.getAll();
+      try {
+        await this.registrationSlotsService.assertStudentCanRegister(
+          currentSemester,
+          payload.studentCode,
+        );
+      } catch (error) {
+        throw new UnauthorizedException(
+          error instanceof Error ? error.message : 'Chưa đến khung giờ đăng ký',
+        );
+      }
     }
 
     return payload;

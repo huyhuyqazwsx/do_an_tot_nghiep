@@ -17,6 +17,7 @@ import {
   RegistrationQueueEvent,
 } from '@app/shared';
 import {
+  Prisma,
   RegistrationBatchItemStatus,
   RegistrationBatchStatus,
   RegistrationBatchType,
@@ -26,6 +27,22 @@ import type { CreateRegistrationBatchDto } from './dto/create-registration-batch
 import type { CancelRegistrationBatchDto } from './dto/cancel-registration-batch.dto';
 import { RegistrationBatchValidatorService } from './helpers/registration-batch-validator.service';
 import { SettingsService } from '../settings/settings.service';
+
+const CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS = 30 * 60;
+
+type ResolvedSectionRow = Prisma.ClassSectionGetPayload<{
+  include: { course: true };
+}>;
+
+type CachedSectionByCodeResponse = {
+  items: ResolvedSectionRow[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
 
 @Injectable()
 export class RegistrationsService {
@@ -37,60 +54,138 @@ export class RegistrationsService {
     private readonly batchValidator: RegistrationBatchValidatorService,
     private readonly settingsService: SettingsService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) { }
+  ) {}
 
   private async resolveSectionCodes(
     sectionCodes: string[],
     semester: string,
-  ): Promise<
-    Map<
-      string,
-      Array<{
-        id: string;
-        courseId: string;
-        sectionType: string | null;
-        requiresLab: boolean;
-        linkedSectionCode: string | null;
-        sectionCode: string;
-        sectionStatus: string | null;
-        dayOfWeek: number | null;
-        timeOfDay: string | null;
-        startPeriod: number | null;
-        endPeriod: number | null;
-        maxCapacity: number;
-        registeredCount: number;
-        course: { code: string; name: string; prerequisite: string | null };
-      }>
-    >
-  > {
+  ): Promise<Map<string, ResolvedSectionRow[]>> {
     const rows = await this.prisma.classSection.findMany({
       where: { sectionCode: { in: sectionCodes }, semester },
-      select: {
-        id: true,
-        courseId: true,
-        sectionType: true,
-        requiresLab: true,
-        linkedSectionCode: true,
-        sectionCode: true,
-        sectionStatus: true,
-        dayOfWeek: true,
-        timeOfDay: true,
-        startPeriod: true,
-        endPeriod: true,
-        maxCapacity: true,
-        registeredCount: true,
-        course: { select: { code: true, name: true, prerequisite: true } },
-      },
+      orderBy: [
+        { sectionCode: 'asc' },
+        { dayOfWeek: 'asc' },
+        { startPeriod: 'asc' },
+        { createdAt: 'asc' },
+      ],
+      include: { course: true },
     });
 
-    const bySectionCode = new Map<string, typeof rows>();
+    const bySectionCode = new Map<string, ResolvedSectionRow[]>();
+    const dbRowsBySectionCode = new Map<string, ResolvedSectionRow[]>();
     for (const row of rows) {
-      const group = bySectionCode.get(row.sectionCode) ?? [];
+      const group = dbRowsBySectionCode.get(row.sectionCode) ?? [];
       group.push(row);
-      bySectionCode.set(row.sectionCode, group);
+      dbRowsBySectionCode.set(row.sectionCode, group);
     }
 
+    for (const sectionCode of sectionCodes) {
+      const group = dbRowsBySectionCode.get(sectionCode) ?? [];
+      if (group.length > 0) {
+        bySectionCode.set(sectionCode, group);
+      }
+    }
+
+    await this.writeSectionLookupCaches(
+      semester,
+      sectionCodes,
+      dbRowsBySectionCode,
+    );
+
     return bySectionCode;
+  }
+
+  private async readSectionByCodeCache(
+    semester: string,
+    sectionCode: string,
+  ): Promise<ResolvedSectionRow[] | null> {
+    const key = RegistrationRedisKey.sectionByCode(semester, sectionCode);
+    const cached = await this.redis.get(key).catch((error) => {
+      this.logger.warn(
+        `[Registrations] Redis section lookup failed for ${key}: ${error.message}`,
+      );
+      return null;
+    });
+
+    if (!cached) return null;
+
+    try {
+      const parsed = JSON.parse(cached) as CachedSectionByCodeResponse;
+      if (!Array.isArray(parsed.items) || !parsed.meta) {
+        await this.redis.del(key);
+        return null;
+      }
+
+      if (!parsed.items.every((item) => this.hasRequiredCourseInfo(item))) {
+        await this.redis.del(key);
+        return null;
+      }
+
+      return parsed.items;
+    } catch {
+      await this.redis.del(key);
+      return null;
+    }
+  }
+
+  private hasRequiredCourseInfo(row: unknown): row is ResolvedSectionRow {
+    const value = row as Partial<ResolvedSectionRow>;
+    const course = value.course as Partial<ResolvedSectionRow['course']>;
+
+    return (
+      row !== null &&
+      typeof row === 'object' &&
+      value.course !== null &&
+      typeof value.course === 'object' &&
+      typeof course.code === 'string' &&
+      typeof course.name === 'string' &&
+      Object.prototype.hasOwnProperty.call(course, 'prerequisite')
+    );
+  }
+
+  private async writeSectionLookupCaches(
+    semester: string,
+    sectionCodes: string[],
+    rowsBySectionCode: Map<string, ResolvedSectionRow[]>,
+  ) {
+    const pipeline = this.redis.pipeline();
+
+    for (const sectionCode of sectionCodes) {
+      const items = rowsBySectionCode.get(sectionCode) ?? [];
+      const response: CachedSectionByCodeResponse = {
+        items,
+        meta: {
+          page: 1,
+          limit: items.length,
+          total: items.length,
+          totalPages: items.length === 0 ? 0 : 1,
+        },
+      };
+
+      pipeline.set(
+        RegistrationRedisKey.sectionByCode(semester, sectionCode),
+        JSON.stringify(response),
+        'EX',
+        CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS,
+      );
+    }
+
+    for (const rows of rowsBySectionCode.values()) {
+      for (const row of rows) {
+        pipeline.set(
+          RegistrationRedisKey.sectionSlots(row.id),
+          Math.max(row.maxCapacity - row.registeredCount, 0).toString(),
+          'EX',
+          CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS,
+        );
+      }
+    }
+
+    await pipeline.exec().catch((error) => {
+      this.logger.warn(
+        `[Registrations] Redis section cache write failed: ${error.message}`,
+      );
+    });
   }
 
   // ─── CREATE BATCH ────────────────────────────────────────────────────────────
@@ -197,7 +292,7 @@ export class RegistrationsService {
     ]);
 
     // 12. Kiểm tra giới hạn tín chỉ tối đa từ DB để tránh lệch cache
-    const { maxCreditsPerSemester } = this.settingsService.getAll();
+    const { maxCreditsPerSemester } = await this.settingsService.getAll();
     const existingCredits = await this.getExistingCredits(userId, semester);
 
     // Tín chỉ tính theo courseId distinct (mỗi môn chỉ tính 1 lần dù có nhiều buổi)
@@ -333,7 +428,7 @@ export class RegistrationsService {
     );
     const redisValues = await this.redis.mget(...keys);
     const fullSections: string[] = [];
-    let missCount = 0;
+    const missedSections: typeof uniqueSections = [];
 
     uniqueSections.forEach((section, index) => {
       const redisValue = redisValues[index];
@@ -341,22 +436,48 @@ export class RegistrationsService {
         redisValue === null ? null : Number.parseInt(redisValue, 10);
 
       if (redisRemaining === null || Number.isNaN(redisRemaining)) {
-        missCount++;
-        const dbRemaining = Math.max(
-          section.maxCapacity - section.registeredCount,
-          0,
-        );
-        if (dbRemaining <= 0) fullSections.push(section.sectionCode);
+        missedSections.push(section);
         return;
       }
 
       if (redisRemaining <= 0) fullSections.push(section.sectionCode);
     });
 
-    if (missCount > 0) {
+    if (missedSections.length > 0) {
       this.logger.debug(
-        `[CreateBatch] Redis slot miss=${missCount}/${uniqueSections.length}, used DB fallback`,
+        `[CreateBatch] Redis slot miss=${missedSections.length}/${uniqueSections.length}, used DB fallback`,
       );
+
+      const dbSections = await this.prisma.classSection.findMany({
+        where: { id: { in: missedSections.map((section) => section.id) } },
+        select: {
+          id: true,
+          sectionCode: true,
+          maxCapacity: true,
+          registeredCount: true,
+        },
+      });
+
+      const pipeline = this.redis.pipeline();
+      for (const section of dbSections) {
+        const remaining = Math.max(
+          section.maxCapacity - section.registeredCount,
+          0,
+        );
+        if (remaining <= 0) fullSections.push(section.sectionCode);
+        pipeline.set(
+          RegistrationRedisKey.sectionSlots(section.id),
+          remaining.toString(),
+          'EX',
+          CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS,
+        );
+      }
+
+      await pipeline.exec().catch((error) => {
+        this.logger.warn(
+          `[CreateBatch] Redis slot cache refill failed: ${error.message}`,
+        );
+      });
     }
 
     if (fullSections.length > 0) {

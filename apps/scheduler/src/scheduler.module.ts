@@ -2,10 +2,11 @@ import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule, RedisModule } from '@app/shared';
 import { PrewarmModule } from './prewarm/prewarm.module';
+import { RegistrationNotificationModule } from './notification/registration-notification.module';
 
 /**
  * SchedulerModule — chạy 1 instance duy nhất.
- * Chứa tất cả cron jobs: prewarm, outbox processor (sau này).
+ * Chứa tất cả cron jobs: prewarm.
  *
  * Không import RabbitmqModule vì scheduler không publish/consume queue.
  */
@@ -15,7 +16,7 @@ import { PrewarmModule } from './prewarm/prewarm.module';
     PrismaModule,
     RedisModule,
     PrewarmModule,
-    // OutboxModule (sau khi implement outbox processor)
+    // RegistrationNotificationModule,
   ],
 })
-export class SchedulerModule {}
+export class SchedulerModule { }

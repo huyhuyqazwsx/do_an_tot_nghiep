@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsObject, IsDateString } from 'class-validator';
+import { IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class UpdateSlotDto {
   @IsOptional()
@@ -10,18 +10,28 @@ export class UpdateSlotDto {
   name?: string;
 
   @IsOptional()
-  @IsObject()
-  studentFilter?: Record<string, unknown>;
+  @IsString()
+  @MaxLength(20)
+  studentCodeFrom?: string;
 
   @IsOptional()
-  @IsDateString()
-  openAt?: string;
+  @IsString()
+  @MaxLength(20)
+  studentCodeTo?: string;
 
   @IsOptional()
-  @IsDateString()
-  closeAt?: string;
+  @IsString()
+  startDate?: string;
 
   @IsOptional()
-  @IsDateString()
-  prewarmAt?: string;
+  @IsString()
+  endDate?: string;
+
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @IsOptional()
+  @IsString()
+  endTime?: string;
 }

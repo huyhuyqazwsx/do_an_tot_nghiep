@@ -59,6 +59,14 @@ export class QueryClassSectionsDto {
   @IsString()
   courseCode?: string;
 
+  @ApiPropertyOptional({
+    example: 'MI1131,MI1131E',
+    description: 'Comma-separated course codes for batch lookup',
+  })
+  @IsOptional()
+  @IsString()
+  courseCodes?: string;
+
   @ApiPropertyOptional({ enum: ClassSectionType })
   @IsOptional()
   @IsEnum(ClassSectionType)

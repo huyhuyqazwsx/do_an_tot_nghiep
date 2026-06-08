@@ -17,6 +17,7 @@ import {
 import type Redis from 'ioredis';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
+import { createHash } from 'node:crypto';
 import { ClassSectionCsvRow } from './types/class-section-csv-row.type';
 import { ClassSectionImportError } from './types/class-section-import-error.type';
 import { ImportedClassSectionRow } from './types/imported-class-section-row.type';
@@ -31,11 +32,7 @@ const CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS = 30 * 60;
 type ClassSectionLookupResponse = {
   items: Array<
     Prisma.ClassSectionGetPayload<{
-      include: {
-        course: {
-          select: { id: true; code: true; name: true; credits: true };
-        };
-      };
+      include: { course: true };
     }>
   >;
   meta: {
@@ -163,9 +160,12 @@ export class ClassSectionsService {
     const where: Prisma.ClassSectionWhereInput = {};
 
     if (q) {
-      throw new BadRequestException(
-        'Không hỗ trợ tìm kiếm mờ bằng q. Vui lòng nhập mã lớp bằng sectionCode.',
-      );
+      where.OR = [
+        { sectionCode: { contains: q, mode: 'insensitive' } },
+        { room: { contains: q, mode: 'insensitive' } },
+        { course: { code: { contains: q, mode: 'insensitive' } } },
+        { course: { name: { contains: q, mode: 'insensitive' } } },
+      ];
     }
 
     if (query.semester?.trim()) {
@@ -176,9 +176,13 @@ export class ClassSectionsService {
       where.sectionCode = query.sectionCode.trim();
     }
 
-    if (query.courseCode?.trim()) {
+    const courseCodes = this.parseCourseCodes(query);
+    if (courseCodes.length > 0) {
       where.course = {
-        code: query.courseCode.trim(),
+        code:
+          courseCodes.length === 1
+            ? { equals: courseCodes[0], mode: 'insensitive' }
+            : { in: courseCodes },
       };
     }
 
@@ -193,40 +197,44 @@ export class ClassSectionsService {
     const orderBy: Prisma.ClassSectionOrderByWithRelationInput = {
       [query.sortBy ?? 'sectionCode']: query.sortOrder ?? 'asc',
     };
+    const cacheKey = RegistrationRedisKey.sectionList(
+      this.hashCachePayload({ page, limit, skip, where, orderBy }),
+    );
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.classSection.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy,
-        include: {
-          course: {
-            select: { id: true, code: true, name: true, credits: true },
+    const response = await this.readSectionListCache(cacheKey, async () => {
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.classSection.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy,
+          include: {
+            course: true,
           },
-        },
-      }),
-      this.prisma.classSection.count({ where }),
-    ]);
+        }),
+        this.prisma.classSection.count({ where }),
+      ]);
 
-    return {
-      items,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
-      },
-    };
+      return {
+        items,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+        },
+      };
+    });
+
+    await this.writeSectionSlotsCache(response.items);
+    return this.withCurrentRegisteredCounts(response);
   }
 
   async findOne(id: string) {
     const classSection = await this.prisma.classSection.findUnique({
       where: { id },
       include: {
-        course: {
-          select: { id: true, code: true, name: true, credits: true },
-        },
+        course: true,
       },
     });
 
@@ -264,9 +272,7 @@ export class ClassSectionsService {
         { createdAt: 'asc' },
       ],
       include: {
-        course: {
-          select: { id: true, code: true, name: true, credits: true },
-        },
+        course: true,
       },
     });
 
@@ -315,11 +321,36 @@ export class ClassSectionsService {
         await this.redis.del(key);
         return null;
       }
+
+      if (!parsed.items.every((item) => this.hasRequiredCourseInfo(item))) {
+        await this.redis.del(key);
+        return null;
+      }
+
       return parsed;
     } catch {
       await this.redis.del(key);
       return null;
     }
+  }
+
+  private hasRequiredCourseInfo(
+    row: unknown,
+  ): row is ClassSectionLookupResponse['items'][number] {
+    const value = row as Partial<ClassSectionLookupResponse['items'][number]>;
+    const course = value.course as Partial<
+      ClassSectionLookupResponse['items'][number]['course']
+    >;
+
+    return (
+      row !== null &&
+      typeof row === 'object' &&
+      value.course !== null &&
+      typeof value.course === 'object' &&
+      typeof course.code === 'string' &&
+      typeof course.name === 'string' &&
+      Object.prototype.hasOwnProperty.call(course, 'prerequisite')
+    );
   }
 
   private async writeSectionByCodeCache(
@@ -381,6 +412,83 @@ export class ClassSectionsService {
         `[ClassSections] Redis cache invalidation failed: ${error.message}`,
       );
     });
+
+    await this.clearSectionListCaches();
+  }
+
+  private async readSectionListCache(
+    key: string,
+    loadFromDb: () => Promise<ClassSectionLookupResponse>,
+  ): Promise<ClassSectionLookupResponse> {
+    const cached = await this.redis.get(key).catch((error) => {
+      this.logger.warn(
+        `[ClassSections] Redis list read failed for ${key}: ${error.message}`,
+      );
+      return null;
+    });
+
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as ClassSectionLookupResponse;
+        if (Array.isArray(parsed.items) && parsed.meta) return parsed;
+      } catch {
+        await this.redis.del(key);
+      }
+    }
+
+    const response = await loadFromDb();
+    await this.redis
+      .set(
+        key,
+        JSON.stringify(response),
+        'EX',
+        CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS,
+      )
+      .catch((error) => {
+        this.logger.warn(
+          `[ClassSections] Redis list write failed for ${key}: ${error.message}`,
+        );
+      });
+    return response;
+  }
+
+  private async clearSectionListCaches() {
+    try {
+      let cursor = '0';
+      do {
+        const [nextCursor, keys] = await this.redis.scan(
+          cursor,
+          'MATCH',
+          RegistrationRedisKey.sectionListAll(),
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) await this.redis.del(...keys);
+      } while (cursor !== '0');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `[ClassSections] Redis list invalidation failed: ${message}`,
+      );
+    }
+  }
+
+  private parseCourseCodes(query: QueryClassSectionsDto) {
+    return [
+      query.courseCode,
+      ...(query.courseCodes?.split(',') ?? []),
+    ]
+      .map((code) => code?.trim())
+      .filter((code): code is string => Boolean(code))
+      .map((code) => code.toUpperCase())
+      .filter((code, index, array) => array.indexOf(code) === index);
+  }
+
+  private hashCachePayload(payload: unknown) {
+    return createHash('sha1')
+      .update(JSON.stringify(payload))
+      .digest('hex');
   }
 
   private async withCurrentRegisteredCounts(
@@ -473,9 +581,7 @@ export class ClassSectionsService {
           registeredCount: dto.registeredCount ?? 0,
         },
         include: {
-          course: {
-            select: { id: true, code: true, name: true, credits: true },
-          },
+          course: true,
         },
       });
 
@@ -614,9 +720,7 @@ export class ClassSectionsService {
             : {}),
         },
         include: {
-          course: {
-            select: { id: true, code: true, name: true, credits: true },
-          },
+          course: true,
         },
       });
 

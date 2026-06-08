@@ -5,7 +5,6 @@ import {
   PrismaModule,
   RedisModule,
   RabbitmqModule,
-  MailModule,
 } from '@app/shared';
 import { AuthModule } from './modules/auth/auth.module';
 import { CoursesModule } from './modules/courses/courses.module';
@@ -13,8 +12,6 @@ import { ClassSectionsModule } from './modules/class-sections/class-sections.mod
 import { ApiLoggerMiddleware } from './common/middlewares/api-logger.middleware';
 import { UsersModule } from './modules/users/users.module';
 import { RegistrationsModule } from './modules/registrations/registrations.module';
-import { RegistrationSessionsModule } from './modules/registration-sessions/registration-sessions.module';
-import { MailTestingModule } from './modules/mail-testing/mail-testing.module';
 import { GradesModule } from './modules/grades/grades.module';
 import { RegistrationSlotsModule } from './modules/registration-slots/registration-slots.module';
 import { SettingsModule } from './modules/settings/settings.module';
@@ -25,14 +22,11 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     PrismaModule,
     RedisModule,
     RabbitmqModule,
-    MailModule,
     AuthModule,
     UsersModule,
     CoursesModule,
     ClassSectionsModule,
-    RegistrationSessionsModule,
     RegistrationsModule,
-    MailTestingModule,
     GradesModule,
     RegistrationSlotsModule,
     SettingsModule,

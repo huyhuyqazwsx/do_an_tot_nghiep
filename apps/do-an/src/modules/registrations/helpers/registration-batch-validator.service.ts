@@ -41,7 +41,7 @@ export class RegistrationBatchValidatorService {
   }
 
   async assertRegistrationSessionOpen(semester: string) {
-    const settings = this.settingsService.getAll();
+    const settings = await this.settingsService.getAll();
 
     if (semester !== settings.currentSemester) {
       throw new BadRequestException(
