@@ -28,7 +28,8 @@ export class GradesController {
 
   /** Sinh viên tự xem điểm của mình */
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
   @ApiOperation({ summary: 'Sinh viên xem bảng điểm của chính mình' })
   getMyGrades(@CurrentUser() user: JwtPayload) {
     return this.gradesService.findByStudent(user.studentCode);

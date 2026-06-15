@@ -68,24 +68,23 @@ export class DashboardService {
         _sum: { maxCapacity: true },
       }),
 
-      // 5. Tổng batch đã gửi
+      // 5. Tổng batch đã gửi (cả đăng ký và hủy)
       this.prisma.registrationBatch.count({
-        where: { semester, type: RegistrationBatchType.CREATE },
+        where: { semester },
       }),
 
       // 6. Batch đang xử lý (PENDING)
       this.prisma.registrationBatch.count({
         where: {
           semester,
-          type: RegistrationBatchType.CREATE,
           status: RegistrationBatchStatus.PENDING,
         },
       }),
 
-      // 7. Đếm batch items theo status
+      // 7. Đếm batch items theo status (cả đăng ký và hủy)
       this.prisma.registrationBatchItem.groupBy({
         by: ['status'],
-        where: { batch: { semester, type: RegistrationBatchType.CREATE } },
+        where: { batch: { semester } },
         _count: { id: true },
       }),
 
@@ -94,7 +93,7 @@ export class DashboardService {
         where: {
           status: RegistrationBatchItemStatus.FAILED,
           processedAt: { gte: failuresFrom },
-          batch: { semester, type: RegistrationBatchType.CREATE },
+          batch: { semester },
         },
       }),
 
@@ -399,7 +398,6 @@ export class DashboardService {
     for (const entry of entries) {
       const createdAtMs = Number(entry['createdAtMs'] ?? 0);
       if (createdAtMs < cutoffMs) continue;
-      if (entry['batchType'] !== RegistrationBatchType.CREATE) continue;
 
       totalItems += Number(entry['totalItems'] ?? 0);
       successItems += Number(entry['successItems'] ?? 0);
