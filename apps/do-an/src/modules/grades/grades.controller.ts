@@ -11,8 +11,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard, Roles, RolesGuard } from '@app/shared';
+import { CurrentUser, JwtAuthGuard, Roles, RolesGuard } from '@app/shared';
 import { UserRole } from '@prisma/client';
+import type { JwtPayload } from '@app/shared';
 import { GradesService } from './grades.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
@@ -24,6 +25,14 @@ import { UpdateGradeDto } from './dto/update-grade.dto';
 @Controller('api/grades')
 export class GradesController {
   constructor(private readonly gradesService: GradesService) {}
+
+  /** Sinh viên tự xem điểm của mình */
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Sinh viên xem bảng điểm của chính mình' })
+  getMyGrades(@CurrentUser() user: JwtPayload) {
+    return this.gradesService.findByStudent(user.studentCode);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Get all grades with pagination' })
