@@ -7,8 +7,8 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { SendOtpDto, VerifyOtpDto, ResetPasswordDto } from './dto/verify-otp.dto';
 import { CurrentUser, JwtAuthGuard } from '@app/shared';
 import type { JwtPayload } from '@app/shared';
 import { AuthUserResponseDto } from './dto/response/auth-user-response.dto';
@@ -27,10 +27,25 @@ export class AuthController {
     return this.authService.login(dto.studentCode, dto.password);
   }
 
-  @Post('forgot-password')
-  @ApiOperation({ summary: 'Quên mật khẩu - Gửi mật khẩu mới qua email' })
-  forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto.email);
+  /** Bước 1: Gửi OTP về email */
+  @Post('forgot-password/send-otp')
+  @ApiOperation({ summary: 'Quên mật khẩu - Gửi OTP về email' })
+  sendOtp(@Body() dto: SendOtpDto) {
+    return this.authService.sendOtp(dto.email);
+  }
+
+  /** Bước 2: Verify OTP → nhận resetToken */
+  @Post('forgot-password/verify-otp')
+  @ApiOperation({ summary: 'Quên mật khẩu - Xác thực OTP' })
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto.email, dto.otp);
+  }
+
+  /** Bước 3: Đặt lại mật khẩu bằng resetToken */
+  @Post('forgot-password/reset')
+  @ApiOperation({ summary: 'Quên mật khẩu - Đặt lại mật khẩu bằng resetToken' })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPasswordWithToken(dto.resetToken, dto.newPassword);
   }
 
   @Get('me')

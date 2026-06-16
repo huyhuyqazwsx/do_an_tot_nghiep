@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService, type JwtPayload, REDIS_CLIENT } from '@app/shared';
 import { UserRole } from '@prisma/client';
@@ -129,34 +129,95 @@ export class AuthService {
     return { message: 'Đăng xuất thành công' };
   }
 
-  async forgotPassword(email: string) {
+  // ─── OTP Forgot Password Flow ─────────────────────────────────────────────
+
+  /**
+   * Bước 1: Gửi OTP 6 số về email. TTL = 5 phút. Rate-limit đơn giản qua Redis.
+   */
+  async sendOtp(email: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
       select: { id: true, email: true, name: true, isActive: true },
     });
 
-    // Không tiết lộ email có tồn tại hay không (bảo mật)
+    // Không tiết lộ email có tồn tại hay không
     if (!user || !user.isActive) {
-      return { message: 'Nếu email tồn tại trong hệ thống, mật khẩu mới đã được gửi.' };
+      return { message: 'Nếu email tồn tại trong hệ thống, mã OTP đã được gửi.' };
     }
 
-    // Sinh mật khẩu mới ngẫu nhiên 10 ký tự
-    const newPassword = randomBytes(5).toString('hex'); // vd: "a3f2b1c9d4"
+    // Rate-limit: chỉ cho gửi lại sau 60 giây
+    const rateLimitKey = `otp:ratelimit:${user.id}`;
+    const isRateLimited = await this.redis.exists(rateLimitKey);
+    if (isRateLimited) {
+      throw new BadRequestException('Vui lòng đợi ít nhất 60 giây trước khi gửi lại OTP.');
+    }
 
-    // Hash và lưu DB
+    // Sinh OTP 6 số
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpKey = `otp:${user.id}`;
+
+    await this.redis.set(otpKey, otp, 'EX', 300); // TTL 5 phút
+    await this.redis.set(rateLimitKey, '1', 'EX', 60); // Rate-limit 60s
+
+    await this.sendOtpMail(user.email, user.name, otp);
+
+    return { message: 'Nếu email tồn tại trong hệ thống, mã OTP đã được gửi.' };
+  }
+
+  /**
+   * Bước 2: Verify OTP. Nếu đúng trả về resetToken (dùng 1 lần, TTL 10 phút).
+   */
+  async verifyOtp(email: string, otp: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, isActive: true },
+    });
+
+    if (!user || !user.isActive) {
+      throw new BadRequestException('OTP không hợp lệ hoặc đã hết hạn.');
+    }
+
+    const otpKey = `otp:${user.id}`;
+    const storedOtp = await this.redis.get(otpKey);
+
+    if (!storedOtp || storedOtp !== otp) {
+      throw new BadRequestException('OTP không hợp lệ hoặc đã hết hạn.');
+    }
+
+    // Xóa OTP sau khi verify thành công (dùng 1 lần)
+    await this.redis.del(otpKey);
+
+    // Tạo resetToken (dùng 1 lần, TTL 10 phút)
+    const resetToken = randomBytes(32).toString('hex');
+    const resetKey = `otp:reset:${resetToken}`;
+    await this.redis.set(resetKey, user.id, 'EX', 600); // TTL 10 phút
+
+    return { resetToken, message: 'Xác thực OTP thành công. Bạn có 10 phút để đặt mật khẩu mới.' };
+  }
+
+  /**
+   * Bước 3: Đặt lại mật khẩu bằng resetToken.
+   */
+  async resetPasswordWithToken(resetToken: string, newPassword: string) {
+    const resetKey = `otp:reset:${resetToken}`;
+    const userId = await this.redis.get(resetKey);
+
+    if (!userId) {
+      throw new BadRequestException('Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
+    }
+
     await this.prisma.user.update({
-      where: { id: user.id },
+      where: { id: userId },
       data: { password: hashPassword(newPassword) },
     });
 
-    // Invalidate session cũ nếu có
-    await this.redis.del(this.getSessionKey(user.id));
+    // Xóa reset token và invalidate session
+    await this.redis.del(resetKey);
+    await this.redis.del(this.getSessionKey(userId));
 
-    // Gửi mail
-    await this.sendNewPasswordMail(user.email, user.name, newPassword);
-
-    return { message: 'Nếu email tồn tại trong hệ thống, mật khẩu mới đã được gửi.' };
+    return { message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.' };
   }
+
 
   async changePassword(uid: string, currentPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({
@@ -179,7 +240,7 @@ export class AuthService {
     return { message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.' };
   }
 
-  private async sendNewPasswordMail(email: string, name: string, newPassword: string) {
+  private async sendOtpMail(email: string, name: string, otp: string) {
     const transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST ?? 'smtp.gmail.com',
       port: Number(process.env.MAIL_PORT ?? 587),
@@ -193,17 +254,16 @@ export class AuthService {
     await transporter.sendMail({
       from: `"Hệ thống Đăng ký Tín chỉ" <${process.env.MAIL_USER}>`,
       to: email,
-      subject: '[Đăng ký Học phần] Mật khẩu mới của bạn',
+      subject: '[Đăng ký Học phần] Mã OTP xác thực của bạn',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          <h2 style="color: #1d4ed8;">Khôi phục mật khẩu</h2>
+          <h2 style="color: #1d4ed8;">Xác thực mã OTP</h2>
           <p>Xin chào <strong>${name}</strong>,</p>
-          <p>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
-          <p>Mật khẩu mới của bạn là:</p>
-          <div style="background:#f3f4f6; padding:12px 20px; border-radius:6px; font-size:22px; font-weight:bold; letter-spacing:4px; text-align:center; color:#111827;">
-            ${newPassword}
+          <p>Bạn vừa yêu cầu đặt lại mật khẩu. Nhập mã OTP sau để tiếp tục:</p>
+          <div style="background:#f3f4f6; padding:16px 20px; border-radius:8px; font-size:36px; font-weight:bold; letter-spacing:10px; text-align:center; color:#111827; margin: 16px 0;">
+            ${otp}
           </div>
-          <p style="margin-top:16px;">Vui lòng đăng nhập và <strong>đổi mật khẩu ngay</strong> sau khi nhận được email này.</p>
+          <p style="color:#6b7280; font-size:13px;">Mã OTP có hiệu lực trong <strong>5 phút</strong>.</p>
           <p style="color:#6b7280; font-size:13px;">Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.</p>
         </div>
       `,
