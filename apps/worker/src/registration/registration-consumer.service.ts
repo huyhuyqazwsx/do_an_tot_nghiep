@@ -16,7 +16,7 @@ const RETRY_COUNT_HEADER = 'x-registration-retry-count';
 const FIRST_QUEUED_AT_HEADER = 'x-registration-first-queued-at';
 const LAST_ERROR_HEADER = 'x-registration-last-error';
 const FAILED_AT_HEADER = 'x-registration-failed-at';
-const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_MAX_RETRIES = 6;
 
 @Injectable()
 export class RegistrationConsumerService implements OnModuleInit {
@@ -27,7 +27,7 @@ export class RegistrationConsumerService implements OnModuleInit {
   constructor(
     private readonly createBatchHandler: CreateBatchHandler,
     private readonly cancelBatchHandler: CancelBatchHandler,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     const rabbitmqUrl =

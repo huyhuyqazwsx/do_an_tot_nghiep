@@ -10,9 +10,19 @@ module.exports = {
     {
       name: 'do-an-worker',
       script: './dist/apps/worker/main.js',
-      instances: 12,
+      instances: 11,
       exec_mode: 'fork',
       watch: false,
+    },
+    {
+      name: 'do-an-worker-dlq',
+      script: './dist/apps/worker/main.js',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      env: {
+        ENABLE_DLQ_CONSUMER: 'true',
+      },
     },
     {
       name: 'do-an-scheduler',
