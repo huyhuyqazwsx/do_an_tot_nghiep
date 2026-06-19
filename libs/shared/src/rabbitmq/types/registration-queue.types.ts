@@ -12,12 +12,14 @@ export type RegistrationBatchJobItem = {
 
 /** Item cho CANCEL — kèm ID của item đăng ký gốc cần hủy */
 export type CancelRegistrationBatchJobItem = {
+  itemId: string;
   classSectionId: string;
   sourceItemId: string;
 };
 
 /** Item đầy đủ thông tin cho CREATE — kèm theo thông tin lịch và môn học */
 export type CreateRegistrationBatchJobItem = {
+  itemId: string;
   classSectionId: string;
   courseId: string;
   courseCode: string;

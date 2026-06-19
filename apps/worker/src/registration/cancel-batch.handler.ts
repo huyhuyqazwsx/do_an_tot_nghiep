@@ -31,6 +31,79 @@ export class CancelBatchHandler {
       ? Math.max(processingStartedAt - new Date(queuedAt).getTime(), 0)
       : 0;
 
+    // ─── Fast path: payload có itemId → dùng CTE, không cần query DB ────────
+    const hasItemIds = payloadItems?.length && payloadItems.every((i) => i.itemId);
+
+    if (hasItemIds) {
+      return this.handleOptimized(batchId, semester, payloadItems!, processingStartedAt, queueWaitMs);
+    }
+
+    // ─── Fallback path: message cũ không có itemId → logic cũ ───────────────
+    return this.handleLegacy(batchId, userId, semester, payloadItems, processingStartedAt, queueWaitMs);
+  }
+
+  /**
+   * Optimized path: dùng CTE — 1 DB round-trip / item, không cần findMany.
+   */
+  private async handleOptimized(
+    batchId: string,
+    semester: string,
+    items: CancelRegistrationBatchJobItem[],
+    processingStartedAt: number,
+    queueWaitMs: number,
+  ): Promise<void> {
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of items) {
+      if (!item.classSectionId || !item.itemId) {
+        await this.helper.markItemFailed(item.itemId, 'Thiếu classSectionId hoặc itemId');
+        failCount++;
+        continue;
+      }
+
+      if (!item.sourceItemId) {
+        await this.helper.markItemFailed(item.itemId, 'Đăng ký không tồn tại hoặc đã hủy');
+        failCount++;
+        continue;
+      }
+
+      try {
+        await this.helper.releaseSlotAndMarkItems(
+          item.itemId,
+          item.classSectionId,
+          item.sourceItemId,
+        );
+        successCount++;
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : 'Lỗi xử lý';
+        await this.helper.markItemFailed(item.itemId, reason);
+        failCount++;
+      }
+    }
+
+    await this.prisma.registrationBatch.update({
+      where: { id: batchId },
+      data: {
+        status: RegistrationBatchStatus.COMPLETED,
+        processedAt: new Date(),
+      },
+    });
+
+    this.writeBatchLog(batchId, semester, queueWaitMs, processingStartedAt, successCount, failCount);
+  }
+
+  /**
+   * Legacy path: message cũ chưa có itemId — giữ nguyên logic findMany + $transaction.
+   */
+  private async handleLegacy(
+    batchId: string,
+    userId: string,
+    semester: string,
+    payloadItems: CancelRegistrationBatchJobItem[] | undefined,
+    processingStartedAt: number,
+    queueWaitMs: number,
+  ): Promise<void> {
     // Batch + items đã được API tạo sẵn trong DB trước khi publish.
     // Chỉ cần load items PENDING để xử lý.
     const items = await this.prisma.registrationBatchItem.findMany({
@@ -114,11 +187,22 @@ export class CancelBatchHandler {
       },
     });
 
-    // ─── Ghi batch processing log vào Redis (thay thế bảng batch_processing_logs) ──────────────
+    this.writeBatchLog(batchId, semester, queueWaitMs, processingStartedAt, successCount, failCount);
+  }
+
+  // ─── Ghi batch processing log vào Redis ──────────────────────────────────────
+  private writeBatchLog(
+    batchId: string,
+    semester: string,
+    queueWaitMs: number,
+    processingStartedAt: number,
+    successCount: number,
+    failCount: number,
+  ): void {
     const processingEndedAt = Date.now();
     const totalItems = successCount + failCount;
     const key = BatchLogRedisKey.entry(semester, batchId);
-    await this.redis
+    this.redis
       .pipeline()
       .hset(key,
         'batchType', RegistrationBatchType.CANCEL,

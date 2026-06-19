@@ -24,9 +24,10 @@ export class DashboardService {
     const failuresFrom = new Date(now.getTime() - failureWindowSeconds * 1000);
 
     // Đọc metrics batch từ Redis (thay thế 2 Prisma aggregate cũ)
-    const [redisMetrics1m, redisMetrics1s] = await Promise.all([
+    const [redisMetrics1m, redisMetrics1s, redisMetrics3s] = await Promise.all([
       this.aggregateBatchLogsFromRedis(semester, metricsWindowSeconds),
       this.aggregateBatchLogsFromRedis(semester, 1),
+      this.aggregateBatchLogsFromRedis(semester, 3),
     ]);
 
     const [
@@ -37,7 +38,8 @@ export class DashboardService {
       slotsAggregate,
 
       // ─── Registration flow ──────────────────────────────────
-      totalBatches,
+      // ─── Registration flow ──────────────────────────────────
+      batchCounts,
       pendingBatches,
       batchItemCounts,
 
@@ -68,9 +70,11 @@ export class DashboardService {
         _sum: { maxCapacity: true },
       }),
 
-      // 5. Tổng batch đã gửi (cả đăng ký và hủy)
-      this.prisma.registrationBatch.count({
+      // 5. Đếm batch theo type
+      this.prisma.registrationBatch.groupBy({
+        by: ['type'],
         where: { semester },
+        _count: { id: true },
       }),
 
       // 6. Batch đang xử lý (PENDING)
@@ -81,12 +85,16 @@ export class DashboardService {
         },
       }),
 
-      // 7. Đếm batch items theo status (cả đăng ký và hủy)
-      this.prisma.registrationBatchItem.groupBy({
-        by: ['status'],
-        where: { batch: { semester } },
-        _count: { id: true },
-      }),
+      // 7. Đếm batch items theo status VÀ type (CREATE / CANCEL)
+      this.prisma.$queryRaw<
+        Array<{ type: string; status: string; count: bigint }>
+      >`
+        SELECT b.type, i.status, COUNT(i.id) as count
+        FROM registration_batch_items i
+        JOIN registration_batches b ON i.batch_id = b.id
+        WHERE b.semester = ${semester}
+        GROUP BY b.type, i.status
+      `,
 
       // 8. Failed items 1 giờ gần nhất, query riêng để phục vụ chi tiết fail
       this.prisma.registrationBatchItem.count({
@@ -126,24 +134,50 @@ export class DashboardService {
 
     // ─── Tính metrics từ kết quả ────────────────────────────────────────
 
-    const itemCountMap = new Map(
-      batchItemCounts.map((g) => [g.status, g._count.id]),
-    );
-    const totalSuccessItems =
-      itemCountMap.get(RegistrationBatchItemStatus.SUCCESS) ?? 0;
-    const totalFailedItems =
-      itemCountMap.get(RegistrationBatchItemStatus.FAILED) ?? 0;
-    const totalPendingItems =
-      itemCountMap.get(RegistrationBatchItemStatus.PENDING) ?? 0;
-    const totalAllItems =
-      totalSuccessItems + totalFailedItems + totalPendingItems;
+    let successItemsCreate = 0;
+    let failedItemsCreate = 0;
+    let successItemsCancel = 0;
+    let failedItemsCancel = 0;
+    let pendingItems = 0;
+
+    for (const row of batchItemCounts) {
+      const count = Number(row.count);
+      if (row.status === RegistrationBatchItemStatus.PENDING) {
+        pendingItems += count;
+      } else if (row.status === RegistrationBatchItemStatus.SUCCESS) {
+        if (row.type === RegistrationBatchType.CREATE) successItemsCreate += count;
+        if (row.type === RegistrationBatchType.CANCEL) successItemsCancel += count;
+      } else if (row.status === RegistrationBatchItemStatus.FAILED) {
+        if (row.type === RegistrationBatchType.CREATE) failedItemsCreate += count;
+        if (row.type === RegistrationBatchType.CANCEL) failedItemsCancel += count;
+      }
+    }
+
+    let totalBatchesCreate = 0;
+    let totalBatchesCancel = 0;
+    for (const row of batchCounts) {
+      if (row.type === RegistrationBatchType.CREATE) totalBatchesCreate += row._count.id;
+      if (row.type === RegistrationBatchType.CANCEL) totalBatchesCancel += row._count.id;
+    }
+    const totalBatches = totalBatchesCreate + totalBatchesCancel;
+
+    const totalSuccessItems = successItemsCreate + successItemsCancel;
+    const totalFailedItems = failedItemsCreate + failedItemsCancel;
+    const totalPendingItems = pendingItems;
+    const totalAllItems = totalSuccessItems + totalFailedItems + totalPendingItems;
 
     const logSum = redisMetrics1m;
 
     // itemsPerSecond: từ aggregate Redis 1 giây gần nhất.
     const itemsPerSecond = redisMetrics1s.totalItems > 0
       ? redisMetrics1s.totalItems / 1
-      : null;
+      : 0;
+
+    // Performance stats (min/max/avg) từ Redis logs 1 phút
+    const perfStats = redisMetrics1m;
+
+    // Realtime stats (min/max/avg) từ Redis logs 3 giây (để vẽ chart)
+    const realtimePerf = redisMetrics3s;
 
     // Tỉ lệ thành công
     const batchSuccessRate =
@@ -214,9 +248,13 @@ export class DashboardService {
       // ─── Registration flow ───────────────────────────────────
       registrationFlow: {
         totalBatches,
+        totalBatchesCreate,
+        totalBatchesCancel,
         pendingBatches,
-        successItems: totalSuccessItems,
-        failedItems: totalFailedItems,
+        successItemsCreate,
+        failedItemsCreate,
+        successItemsCancel,
+        failedItemsCancel,
       },
 
       // ─── Hot sections ────────────────────────────────────────
@@ -235,6 +273,65 @@ export class DashboardService {
         }
         : null,
 
+      // ─── Performance stats (min/max/avg) ────────────────────
+      performanceStats: {
+        batchCount: perfStats.batchCount,
+        processingDuration: {
+          min: perfStats.minProcessingDurationMs,
+          max: perfStats.maxProcessingDurationMs,
+          avg: perfStats.avgProcessingDurationMs !== null
+            ? Number(perfStats.avgProcessingDurationMs.toFixed(0))
+            : null,
+        },
+        queueWait: {
+          min: perfStats.minQueueWaitMs,
+          max: perfStats.maxQueueWaitMs,
+          avg: perfStats.avgQueueWaitMs !== null
+            ? Number(perfStats.avgQueueWaitMs.toFixed(0))
+            : null,
+        },
+        totalResponseTime: {
+          min: perfStats.minTotalResponseMs,
+          max: perfStats.maxTotalResponseMs,
+          avg: perfStats.avgTotalResponseMs !== null
+            ? Number(perfStats.avgTotalResponseMs.toFixed(0))
+            : null,
+        },
+        itemsPerBatch: {
+          min: perfStats.minItems,
+          max: perfStats.maxItems,
+          avg: perfStats.totalItems > 0 && perfStats.batchCount > 0
+            ? Number((perfStats.totalItems / perfStats.batchCount).toFixed(1))
+            : null,
+        },
+      },
+
+      // ─── Realtime stats (3 seconds - for chart) ─────────────
+      realtimeStats: {
+        batchCount: realtimePerf.batchCount,
+        processingDuration: {
+          min: realtimePerf.minProcessingDurationMs,
+          max: realtimePerf.maxProcessingDurationMs,
+          avg: realtimePerf.avgProcessingDurationMs !== null
+            ? Number(realtimePerf.avgProcessingDurationMs.toFixed(0))
+            : null,
+        },
+        queueWait: {
+          min: realtimePerf.minQueueWaitMs,
+          max: realtimePerf.maxQueueWaitMs,
+          avg: realtimePerf.avgQueueWaitMs !== null
+            ? Number(realtimePerf.avgQueueWaitMs.toFixed(0))
+            : null,
+        },
+        totalResponseTime: {
+          min: realtimePerf.minTotalResponseMs,
+          max: realtimePerf.maxTotalResponseMs,
+          avg: realtimePerf.avgTotalResponseMs !== null
+            ? Number(realtimePerf.avgTotalResponseMs.toFixed(0))
+            : null,
+        },
+      },
+
       // ─── Warnings ────────────────────────────────────────────
       warnings,
 
@@ -248,13 +345,29 @@ export class DashboardService {
   private async checkRedisHealth(): Promise<{
     status: 'ready' | 'connecting' | 'down';
     pingMs: number | null;
+    opsPerSec?: number | null;
+    totalCommands?: number | null;
   }> {
     const startedAt = Date.now();
     try {
       await this.redis.ping();
+      const pingMs = Date.now() - startedAt;
+
+      const infoStats = await this.redis.info('stats');
+      let opsPerSec: number | null = null;
+      let totalCommands: number | null = null;
+
+      const opsMatch = infoStats.match(/instantaneous_ops_per_sec:(\d+)/);
+      if (opsMatch) opsPerSec = parseInt(opsMatch[1], 10);
+
+      const cmdMatch = infoStats.match(/total_commands_processed:(\d+)/);
+      if (cmdMatch) totalCommands = parseInt(cmdMatch[1], 10);
+
       return {
         status: 'ready',
-        pingMs: Date.now() - startedAt,
+        pingMs,
+        opsPerSec,
+        totalCommands,
       };
     } catch (err) {
       this.logger.warn(
@@ -264,6 +377,8 @@ export class DashboardService {
       return {
         status: this.redis.status === 'connecting' ? 'connecting' : 'down',
         pingMs: null,
+        opsPerSec: null,
+        totalCommands: null,
       };
     }
   }
@@ -328,18 +443,35 @@ export class DashboardService {
     const batchPattern = BatchLogRedisKey.pattern(await this.prisma.systemSetting
       .findUnique({ where: { id: 1 } })
       .then((s) => s?.currentSemester ?? ''));
-    const [, batchKeys] = await this.redis.scan('0', 'MATCH', batchPattern, 'COUNT', 500)
-      .catch(() => ['0', [] as string[]] as [string, string[]]);
+    
+    let cursor = '0';
+    const batchKeys: string[] = [];
+    do {
+      const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', batchPattern, 'COUNT', 1000)
+        .catch(() => ['0', [] as string[]] as [string, string[]]);
+      cursor = nextCursor;
+      batchKeys.push(...keys);
+    } while (cursor !== '0');
 
     const allKeysToDelete = [...rpsKeys, ...batchKeys];
     let redisKeysDeleted = 0;
     try {
       if (allKeysToDelete.length > 0) {
-        redisKeysDeleted = await this.redis.del(...allKeysToDelete);
+        // Chia nhỏ mảng keys để tránh lỗi Maximum call stack size exceeded
+        const chunkSize = 1000;
+        for (let i = 0; i < allKeysToDelete.length; i += chunkSize) {
+          const chunk = allKeysToDelete.slice(i, i + chunkSize);
+          await this.redis.del(...chunk);
+        }
+        redisKeysDeleted = allKeysToDelete.length;
       }
       this.logger.warn(
         `[Reset] Deleted ${redisKeysDeleted} Redis keys (RPS + batch logs)`,
       );
+
+      // 4. Reset Redis INFO stats (total_commands_processed, etc.)
+      await this.redis.config('RESETSTAT');
+      this.logger.warn('[Reset] Redis stats reset to 0');
     } catch (err) {
       this.logger.error(`[Reset] Failed to delete Redis keys: ${(err as Error).message}`);
     }
@@ -361,8 +493,18 @@ export class DashboardService {
     totalItems: number;
     successItems: number;
     failedItems: number;
+    batchCount: number;
     avgProcessingDurationMs: number | null;
     avgQueueWaitMs: number | null;
+    minProcessingDurationMs: number | null;
+    maxProcessingDurationMs: number | null;
+    minQueueWaitMs: number | null;
+    maxQueueWaitMs: number | null;
+    minTotalResponseMs: number | null;
+    maxTotalResponseMs: number | null;
+    avgTotalResponseMs: number | null;
+    minItems: number | null;
+    maxItems: number | null;
   }> {
     const cutoffMs = Date.now() - windowSeconds * 1000;
     const pattern = BatchLogRedisKey.pattern(semester);
@@ -393,26 +535,61 @@ export class DashboardService {
     let failedItems = 0;
     let sumDuration = 0;
     let sumQueue = 0;
+    let sumTotal = 0;
     let count = 0;
+
+    let minDuration = Infinity;
+    let maxDuration = -Infinity;
+    let minQueue = Infinity;
+    let maxQueue = -Infinity;
+    let minTotal = Infinity;
+    let maxTotal = -Infinity;
+    let minItemCount = Infinity;
+    let maxItemCount = -Infinity;
 
     for (const entry of entries) {
       const createdAtMs = Number(entry['createdAtMs'] ?? 0);
       if (createdAtMs < cutoffMs) continue;
 
-      totalItems += Number(entry['totalItems'] ?? 0);
+      const items = Number(entry['totalItems'] ?? 0);
+      const duration = Number(entry['processingDurationMs'] ?? 0);
+      const queue = Number(entry['queueWaitMs'] ?? 0);
+      const totalResponse = queue + duration;
+
+      totalItems += items;
       successItems += Number(entry['successItems'] ?? 0);
       failedItems += Number(entry['failedItems'] ?? 0);
-      sumDuration += Number(entry['processingDurationMs'] ?? 0);
-      sumQueue += Number(entry['queueWaitMs'] ?? 0);
+      sumDuration += duration;
+      sumQueue += queue;
+      sumTotal += totalResponse;
       count++;
+
+      if (duration < minDuration) minDuration = duration;
+      if (duration > maxDuration) maxDuration = duration;
+      if (queue < minQueue) minQueue = queue;
+      if (queue > maxQueue) maxQueue = queue;
+      if (totalResponse < minTotal) minTotal = totalResponse;
+      if (totalResponse > maxTotal) maxTotal = totalResponse;
+      if (items < minItemCount) minItemCount = items;
+      if (items > maxItemCount) maxItemCount = items;
     }
 
     return {
       totalItems,
       successItems,
       failedItems,
+      batchCount: count,
       avgProcessingDurationMs: count > 0 ? sumDuration / count : null,
       avgQueueWaitMs: count > 0 ? sumQueue / count : null,
+      minProcessingDurationMs: count > 0 ? minDuration : null,
+      maxProcessingDurationMs: count > 0 ? maxDuration : null,
+      minQueueWaitMs: count > 0 ? minQueue : null,
+      maxQueueWaitMs: count > 0 ? maxQueue : null,
+      minTotalResponseMs: count > 0 ? minTotal : null,
+      maxTotalResponseMs: count > 0 ? maxTotal : null,
+      avgTotalResponseMs: count > 0 ? sumTotal / count : null,
+      minItems: count > 0 ? minItemCount : null,
+      maxItems: count > 0 ? maxItemCount : null,
     };
   }
 }

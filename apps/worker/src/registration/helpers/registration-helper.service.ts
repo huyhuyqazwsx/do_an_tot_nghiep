@@ -130,4 +130,77 @@ export class RegistrationHelperService {
       },
     });
   }
+
+  // ─── CTE optimized methods (1 query = acquireSlot + markSuccess) ────────────
+
+  /**
+   * Gộp acquireSlot + markSuccess thành 1 câu SQL CTE duy nhất.
+   * Giảm từ 4 DB round-trips (BEGIN + UPDATE + UPDATE + COMMIT) → 1 round-trip.
+   * Postgres đảm bảo atomic trong 1 statement.
+   */
+  async acquireSlotAndMarkSuccess(
+    itemId: string,
+    classSectionId: string,
+  ): Promise<{ remaining: number }> {
+    const result = await this.prisma.$queryRaw<
+      Array<{ remaining: number }>
+    >`
+      WITH slot AS (
+        UPDATE class_sections
+        SET sl_dk = sl_dk + 1
+        WHERE id = ${classSectionId}::uuid
+          AND sl_dk < sl_max
+        RETURNING (sl_max - sl_dk) AS remaining
+      )
+      UPDATE registration_batch_items
+      SET status = 'SUCCESS',
+          remaining_slots = (SELECT remaining FROM slot),
+          processed_at = NOW()
+      WHERE id = ${itemId}::uuid
+        AND EXISTS (SELECT 1 FROM slot)
+      RETURNING (SELECT remaining FROM slot) AS remaining
+    `;
+
+    if (result.length === 0) {
+      throw new Error('Lớp học đã hết chỗ');
+    }
+
+    return { remaining: result[0].remaining };
+  }
+
+  /**
+   * Gộp releaseSlot + mark source CANCELLED + mark cancel item SUCCESS thành 1 CTE.
+   * Dùng cho Cancel batch — 1 query thay vì 5 round-trips.
+   */
+  async releaseSlotAndMarkItems(
+    cancelItemId: string,
+    classSectionId: string,
+    sourceItemId: string,
+  ): Promise<{ remaining: number }> {
+    const result = await this.prisma.$queryRaw<
+      Array<{ remaining: number }>
+    >`
+      WITH slot AS (
+        UPDATE class_sections
+        SET sl_dk = GREATEST(sl_dk - 1, 0)
+        WHERE id = ${classSectionId}::uuid
+        RETURNING (sl_max - sl_dk) AS remaining
+      ),
+      cancel_source AS (
+        UPDATE registration_batch_items
+        SET status = 'CANCELLED',
+            remaining_slots = (SELECT remaining FROM slot),
+            processed_at = NOW()
+        WHERE id = ${sourceItemId}::uuid
+      )
+      UPDATE registration_batch_items
+      SET status = 'SUCCESS',
+          remaining_slots = (SELECT remaining FROM slot),
+          processed_at = NOW()
+      WHERE id = ${cancelItemId}::uuid
+      RETURNING (SELECT remaining FROM slot) AS remaining
+    `;
+
+    return { remaining: result[0]?.remaining ?? 0 };
+  }
 }

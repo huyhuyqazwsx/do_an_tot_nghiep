@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'do-an-api',
       script: './dist/apps/do-an/main.js',
-      instances: 2,
+      instances: 3,
       exec_mode: 'cluster',
       watch: false,
     },

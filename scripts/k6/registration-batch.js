@@ -15,7 +15,7 @@ const GROUP_SIZE = Number(__ENV.GROUP_SIZE || "100");
 const POLL_BATCH = (__ENV.POLL_BATCH || "true") !== "false";
 const CANCEL_AFTER_CREATE = (__ENV.CANCEL_AFTER_CREATE || "true") !== "false";
 const POLL_ATTEMPTS = Number(__ENV.POLL_ATTEMPTS || "20");
-const POLL_INTERVAL_SECONDS = Number(__ENV.POLL_INTERVAL_SECONDS || "1");
+const POLL_INTERVAL_SECONDS = Number(__ENV.POLL_INTERVAL_SECONDS || "3");
 
 export const options = {
   scenarios: {
@@ -113,18 +113,22 @@ export default function (data) {
   loginOk.add(!!token);
   if (!token) return;
 
-  // 1. Chọn bộ section codes theo nhóm
+  // 1. Load Initial Data (Giống hệt luồng FE: vừa vào trang Đăng ký là gọi 2 API này)
+  loadInitialData(token);
+  sleep(1);
+
+  // 2. Chọn bộ section codes theo nhóm
   const groupIndex = Math.floor(iterationIndex / GROUP_SIZE);
   const batchIndex = groupIndex % sectionCodeBatches.length;
   const sectionCodes = sectionCodeBatches[batchIndex];
 
-  // 2. Tìm kiếm lớp (giống luồng thật: SV search mã lớp → xem kết quả → chọn)
+  // 3. Tìm kiếm lớp (giống luồng thật: SV search mã lớp → xem kết quả → chọn)
   for (const code of sectionCodes) {
     searchClassSection(token, code);
     sleep(1);
   }
 
-  // 3. Gửi đăng ký batch
+  // 4. Gửi đăng ký batch
   const createRes = http.post(
     `${BASE_URL}/api/registrations/batches`,
     JSON.stringify({ semester: SEMESTER, sectionCodes }),
@@ -145,9 +149,7 @@ export default function (data) {
     return;
   }
 
-  sleep(1);
-
-  // 4. Poll kết quả batch
+  // 5. Poll kết quả batch ngay lập tức (giống Frontend chuyển trang)
   const batchId = createRes.json("batchId");
   let createBatch = null;
   if (POLL_BATCH && batchId) {
@@ -156,7 +158,7 @@ export default function (data) {
 
   sleep(1);
 
-  // 5. Hủy lớp vừa đăng ký (giả lập SV thay đổi lịch)
+  // 6. Hủy lớp vừa đăng ký (giả lập SV thay đổi lịch)
   if (CANCEL_AFTER_CREATE && createBatch) {
     const successfulCodes = successSectionCodes(createBatch);
     if (successfulCodes.length > 0) {
@@ -167,6 +169,32 @@ export default function (data) {
 }
 
 // ─── Search class section (giả lập FE search trước khi chọn lớp) ────────────
+
+function loadInitialData(token) {
+  // Giả lập FE gọi 2 API song song ngay khi vào trang Đăng ký
+  const reqs = [
+    {
+      method: "GET",
+      url: `${BASE_URL}/api/settings`,
+      params: authParams(token),
+    },
+    {
+      method: "GET",
+      url: `${BASE_URL}/api/registration-slots/current/me?semester=${encodeURIComponent(SEMESTER)}`,
+      params: authParams(token),
+    },
+  ];
+
+  const responses = http.batch(reqs);
+
+  check(responses[0], {
+    "load settings ok": (r) => r.status === 200,
+  });
+
+  check(responses[1], {
+    "load registration slots ok": (r) => r.status === 200,
+  });
+}
 
 function searchClassSection(token, sectionCode) {
   const startedAt = Date.now();

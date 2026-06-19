@@ -330,8 +330,9 @@ export class RegistrationsService {
     }
 
     // Ghi batch + items vào DB. Nếu lỗi thì rollback Redis (cộng lại slot).
+    let createdItems: Array<{ id: string; classSectionId: string | null }> = [];
     try {
-      await this.prisma.registrationBatch.create({
+      const batch = await this.prisma.registrationBatch.create({
         data: {
           id: batchId,
           userId,
@@ -348,7 +349,14 @@ export class RegistrationsService {
             },
           },
         },
+        include: {
+          items: {
+            select: { id: true, classSectionId: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
       });
+      createdItems = batch.items;
     } catch (dbError) {
       // Rollback: trả lại slot vừa trừ để tránh "ghost slot" treo mãi trên Redis.
       // Nếu INCR cũng lỗi thì cronjob reconcile (mỗi 2 phút) sẽ tự dọn.
@@ -375,14 +383,20 @@ export class RegistrationsService {
       );
     }
 
+    // Build map classSectionId → itemId để gửi kèm trong payload
+    const itemIdBySectionId = new Map(
+      createdItems.map((item) => [item.classSectionId, item.id]),
+    );
+
     const payload: RegistrationBatchJobPayload = {
       type: RegistrationQueueEvent.CREATE_BATCH_REQUESTED,
       batchId,
       userId,
       semester,
       queuedAt: new Date().toISOString(),
-      // Gửi TẤT CẢ row (allRows) để Worker insert đúng số slot cho từng buổi học
+      // Gửi TẤT CẢ row (allRows) kèm itemId để Worker không cần query DB
       items: allRows.map((row) => ({
+        itemId: itemIdBySectionId.get(row.id) ?? '',
         classSectionId: row.id,
         courseId: row.courseId,
         courseCode: row.course.code,
@@ -566,8 +580,9 @@ export class RegistrationsService {
     }
 
     // Ghi batch + items vào DB. Nếu lỗi thì rollback Redis (trừ lại slot vừa cộng).
+    let cancelCreatedItems: Array<{ id: string; classSectionId: string | null }> = [];
     try {
-      await this.prisma.registrationBatch.create({
+      const batch = await this.prisma.registrationBatch.create({
         data: {
           id: batchId,
           userId,
@@ -584,7 +599,14 @@ export class RegistrationsService {
             },
           },
         },
+        include: {
+          items: {
+            select: { id: true, classSectionId: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
       });
+      cancelCreatedItems = batch.items;
     } catch (dbError) {
       // Rollback: trừ lại slot vừa cộng để tránh slot bị thừa trên Redis.
       // Nếu DECR cũng lỗi thì cronjob reconcile (mỗi 2 phút) sẽ tự dọn.
@@ -611,6 +633,11 @@ export class RegistrationsService {
       );
     }
 
+    // Build map classSectionId → cancelItemId
+    const cancelItemIdBySectionId = new Map(
+      cancelCreatedItems.map((item) => [item.classSectionId, item.id]),
+    );
+
     const payload: RegistrationBatchJobPayload = {
       type: RegistrationQueueEvent.CANCEL_BATCH_REQUESTED,
       batchId,
@@ -618,6 +645,7 @@ export class RegistrationsService {
       semester,
       queuedAt: new Date().toISOString(),
       items: classSectionIds.map((classSectionId) => ({
+        itemId: cancelItemIdBySectionId.get(classSectionId) ?? '',
         classSectionId,
         sourceItemId: sourceItemMap.get(classSectionId)!,
       })),
