@@ -1,7 +1,15 @@
-import { Inject, Injectable, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService, type JwtPayload, REDIS_CLIENT } from '@app/shared';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { randomBytes, randomUUID } from 'crypto';
 import type Redis from 'ioredis';
 import * as nodemailer from 'nodemailer';
@@ -9,11 +17,20 @@ import { hashPassword, verifyPassword } from '../../common/security/password-has
 import { RegistrationSlotsService } from '../registration-slots/registration-slots.service';
 import { SettingsService } from '../settings/settings.service';
 
-// TODO: Xóa constant này sau khi đã seed tài khoản admin thật vào DB
-const SUPERADMIN_BYPASS_ID = '00000000-0000-0000-0000-000000000001';
+// Tài khoản admin mặc định được tự tạo lúc khởi động nếu DB chưa có.
+const DEFAULT_ADMIN_CODE = '999999999';
+const DEFAULT_ADMIN_PASSWORD = 'admin';
+// Email giả ban đầu; nếu có email thật (DEFAULT_ADMIN_EMAIL / MAIL_USER) thì
+// dùng email thật để luồng quên mật khẩu (gửi OTP) hoạt động được cho admin.
+const PLACEHOLDER_ADMIN_EMAIL = 'admin@system.local';
+// Phiên đăng nhập của admin dài 1 tuần; sinh viên dùng JWT_EXPIRES_IN như cũ.
+const ADMIN_TOKEN_EXPIRES_IN = '7d';
+const ADMIN_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -22,37 +39,11 @@ export class AuthService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) { }
 
-  async login(studentCode: string, password: string) {
-    // TODO: Xóa bypass này sau khi đã seed tài khoản admin thật vào DB
-    if (studentCode === '999999999' && password === 'admin') {
-      const sessionId = randomUUID();
-      const payload: JwtPayload = {
-        sub: SUPERADMIN_BYPASS_ID,
-        studentCode: '999999999',
-        role: UserRole.ADMIN,
-        sessionId,
-      };
-      const sessionTtlSeconds = this.getSessionTtlSeconds();
-      await this.redis.set(
-        this.getSessionKey(SUPERADMIN_BYPASS_ID),
-        sessionId,
-        'EX',
-        sessionTtlSeconds,
-      );
-      return {
-        accessToken: this.jwtService.sign(payload),
-        user: {
-          id: SUPERADMIN_BYPASS_ID,
-          studentCode: '999999999',
-          name: 'Super Admin',
-          email: 'admin@system.local',
-          role: 'ADMIN',
-          courseYear: null,
-          department: null,
-        },
-      };
-    }
+  async onModuleInit() {
+    await this.ensureDefaultAdmin();
+  }
 
+  async login(studentCode: string, password: string) {
     const user = await this.findAuthUserByStudentCode(studentCode);
 
     if (!user) throw new UnauthorizedException('Tài khoản không tồn tại');
@@ -82,17 +73,19 @@ export class AuthService {
       role: user.role,
       sessionId,
     };
-    const sessionTtlSeconds = this.getSessionTtlSeconds();
+    const { expiresIn, ttlSeconds } = this.getTokenLifetime(user.role);
 
     await this.redis.set(
       this.getSessionKey(user.id),
       sessionId,
       'EX',
-      sessionTtlSeconds,
+      ttlSeconds,
     );
 
     return {
-      accessToken: this.jwtService.sign(payload),
+      accessToken: this.jwtService.sign(payload, {
+        expiresIn: expiresIn as '1h',
+      }),
       user: {
         id: user.id,
         studentCode: user.studentCode,
@@ -106,19 +99,6 @@ export class AuthService {
   }
 
   async getMe(uid: string) {
-    // TODO: Xóa bypass này sau khi đã seed tài khoản admin thật vào DB
-    if (uid === SUPERADMIN_BYPASS_ID) {
-      return {
-        id: SUPERADMIN_BYPASS_ID,
-        studentCode: '999999999',
-        name: 'Super Admin',
-        email: 'admin@system.local',
-        role: 'ADMIN',
-        courseYear: null,
-        department: null,
-      };
-    }
-
     const user = await this.findCurrentUserById(uid);
     if (!user) throw new UnauthorizedException();
     return user;
@@ -306,9 +286,26 @@ export class AuthService {
     });
   }
 
-  private getSessionTtlSeconds() {
-    const expiresIn = process.env.JWT_EXPIRES_IN ?? '1h';
+  /**
+   * Thời hạn token + TTL phiên Redis theo vai trò.
+   * Admin dùng phiên dài 1 tuần; các vai trò khác giữ JWT_EXPIRES_IN như cũ.
+   */
+  private getTokenLifetime(role: UserRole): {
+    expiresIn: string;
+    ttlSeconds: number;
+  } {
+    if (role === UserRole.ADMIN) {
+      return {
+        expiresIn: ADMIN_TOKEN_EXPIRES_IN,
+        ttlSeconds: ADMIN_TOKEN_TTL_SECONDS,
+      };
+    }
 
+    const expiresIn = process.env.JWT_EXPIRES_IN ?? '1h';
+    return { expiresIn, ttlSeconds: this.parseExpiresToSeconds(expiresIn) };
+  }
+
+  private parseExpiresToSeconds(expiresIn: string) {
     if (/^\d+$/.test(expiresIn)) {
       return Number(expiresIn);
     }
@@ -333,5 +330,81 @@ export class AuthService {
       default:
         throw new Error(`JWT_EXPIRES_IN không hợp lệ: ${expiresIn}`);
     }
+  }
+
+  /**
+   * Tự tạo tài khoản admin mặc định lúc khởi động nếu DB chưa có.
+   * Dùng find-or-create, bỏ qua lỗi P2002 khi nhiều tiến trình API cùng tạo.
+   */
+  private async ensureDefaultAdmin() {
+    const email = this.getDefaultAdminEmail();
+    const existing = await this.prisma.user.findUnique({
+      where: { studentCode: DEFAULT_ADMIN_CODE },
+      select: { id: true, email: true },
+    });
+
+    if (existing) {
+      // Vá email placeholder cũ sang email thật để admin dùng được quên mật khẩu.
+      if (
+        existing.email === PLACEHOLDER_ADMIN_EMAIL &&
+        email !== PLACEHOLDER_ADMIN_EMAIL
+      ) {
+        try {
+          await this.prisma.user.update({
+            where: { id: existing.id },
+            data: { email },
+          });
+          this.logger.log(`Đã cập nhật email admin mặc định → ${email}`);
+        } catch (error) {
+          // Email đã thuộc tài khoản khác → giữ nguyên, không chặn khởi động.
+          if (
+            !(
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === 'P2002'
+            )
+          ) {
+            throw error;
+          }
+        }
+      }
+      return;
+    }
+
+    try {
+      await this.prisma.user.create({
+        data: {
+          studentCode: DEFAULT_ADMIN_CODE,
+          name: 'Quản trị hệ thống',
+          email,
+          password: hashPassword(DEFAULT_ADMIN_PASSWORD),
+          role: UserRole.ADMIN,
+          isActive: true,
+        },
+      });
+      this.logger.log(
+        `Đã tạo tài khoản admin mặc định (mã ${DEFAULT_ADMIN_CODE}, email ${email})`,
+      );
+    } catch (error) {
+      // Tiến trình API khác đã tạo trước (chạy nhiều instance) → bỏ qua.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Email của admin mặc định: ưu tiên DEFAULT_ADMIN_EMAIL, rồi MAIL_USER
+   * (hộp thư hệ thống dùng để gửi — chắc chắn nhận được), cuối cùng là placeholder.
+   */
+  private getDefaultAdminEmail() {
+    return (
+      process.env.DEFAULT_ADMIN_EMAIL ||
+      process.env.MAIL_USER ||
+      PLACEHOLDER_ADMIN_EMAIL
+    );
   }
 }

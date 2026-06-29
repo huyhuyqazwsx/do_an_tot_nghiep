@@ -16,7 +16,7 @@ import { RegistrationNotificationModule } from './notification/registration-noti
     PrismaModule,
     RedisModule,
     PrewarmModule,
-    // RegistrationNotificationModule,
+    RegistrationNotificationModule,
   ],
 })
 export class SchedulerModule { }

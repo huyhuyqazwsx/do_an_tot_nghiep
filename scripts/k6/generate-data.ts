@@ -12,11 +12,11 @@ async function main() {
       semester,
       sectionType: 'LT_BT',
       maxCapacity: { gte: 150 },
-      OR: [
-        { course: { code: { startsWith: 'IT' } } },
-        { course: { code: { startsWith: 'MI' } } },
-        { course: { code: { startsWith: 'SSH' } } },
-      ],
+      // OR: [
+      //   { course: { code: { startsWith: 'IT' } } },
+      //   { course: { code: { startsWith: 'MI' } } },
+      //   { course: { code: { startsWith: 'SSH' } } },
+      // ],
     },
     include: { course: { select: { id: true, code: true } } },
   });
