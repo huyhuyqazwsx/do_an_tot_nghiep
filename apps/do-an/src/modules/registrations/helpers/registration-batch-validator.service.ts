@@ -83,22 +83,33 @@ export class RegistrationBatchValidatorService {
     }
 
     for (const [, group] of byCourse) {
-      if (group.length < 2) continue;
-
-      const mainSections = group.filter((s) => s.requiresLab);
+      // Lớp thực hành / thí nghiệm
       const labSections = group.filter(
         (s) =>
           s.sectionType === ClassSectionType.TN ||
           s.sectionType === ClassSectionType.TH,
       );
+      // Lớp lý thuyết đi kèm: nhận diện theo LOẠI lớp (LT / LT_BT / BT), không
+      // dựa vào can_tn vì cờ này không nhất quán giữa các môn trong dữ liệu.
+      const theorySections = group.filter(
+        (s) =>
+          s.sectionType === ClassSectionType.LT ||
+          s.sectionType === ClassSectionType.LT_BT ||
+          s.sectionType === ClassSectionType.BT,
+      );
+      // Lớp LT được đánh dấu bắt buộc kèm TN/TH (can_tn = true)
+      const mainSectionsRequiringLab = group.filter((s) => s.requiresLab);
 
-      if (mainSections.length > 0 && labSections.length === 0) {
+      // Chiều 1: có lớp LT yêu cầu kèm TN/TH nhưng batch thiếu lớp thực hành
+      if (mainSectionsRequiringLab.length > 0 && labSections.length === 0) {
         throw new BadRequestException(
-          `Môn ${mainSections[0].sectionCode} yêu cầu đăng ký kèm lớp TN/TH. Vui lòng thêm lớp thực hành vào batch.`,
+          `Môn ${mainSectionsRequiringLab[0].sectionCode} yêu cầu đăng ký kèm lớp TN/TH. Vui lòng thêm lớp thực hành vào batch.`,
         );
       }
 
-      if (labSections.length > 0 && mainSections.length === 0) {
+      // Chiều 2: có lớp TN/TH nhưng thiếu lớp lý thuyết tương ứng
+      // (kể cả khi sinh viên chỉ đăng ký mỗi lớp thí nghiệm — group chỉ có 1 phần tử)
+      if (labSections.length > 0 && theorySections.length === 0) {
         throw new BadRequestException(
           `Lớp TN/TH ${labSections[0].sectionCode} không có lớp lý thuyết tương ứng trong batch.`,
         );

@@ -11,7 +11,8 @@ async function main() {
     where: {
       semester,
       sectionType: 'LT_BT',
-      maxCapacity: { gte: 150 },
+      maxCapacity: { gte: 100 },
+      requiresLab: false,
       // OR: [
       //   { course: { code: { startsWith: 'IT' } } },
       //   { course: { code: { startsWith: 'MI' } } },

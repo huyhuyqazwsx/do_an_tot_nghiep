@@ -60,37 +60,57 @@ export class RegistrationsService {
     sectionCodes: string[],
     semester: string,
   ): Promise<Map<string, ResolvedSectionRow[]>> {
-    const rows = await this.prisma.classSection.findMany({
-      where: { sectionCode: { in: sectionCodes }, semester },
-      orderBy: [
-        { sectionCode: 'asc' },
-        { dayOfWeek: 'asc' },
-        { startPeriod: 'asc' },
-        { createdAt: 'asc' },
-      ],
-      include: { course: true },
-    });
-
     const bySectionCode = new Map<string, ResolvedSectionRow[]>();
-    const dbRowsBySectionCode = new Map<string, ResolvedSectionRow[]>();
-    for (const row of rows) {
-      const group = dbRowsBySectionCode.get(row.sectionCode) ?? [];
-      group.push(row);
-      dbRowsBySectionCode.set(row.sectionCode, group);
-    }
+    const missedCodes: string[] = [];
 
+    // 1. Đọc cache theo mã lớp trước (reg:section:code) — cache đã chứa đầy đủ
+    //    thông tin lớp kèm id (UUID), nhờ đó hàm trừ slot dùng được uuid mà
+    //    không phải truy vấn DB ở đường nóng.
     for (const sectionCode of sectionCodes) {
-      const group = dbRowsBySectionCode.get(sectionCode) ?? [];
-      if (group.length > 0) {
-        bySectionCode.set(sectionCode, group);
+      const cached = await this.readSectionByCodeCache(semester, sectionCode);
+      if (cached && cached.length > 0) {
+        bySectionCode.set(sectionCode, cached);
+      } else {
+        missedCodes.push(sectionCode);
       }
     }
 
-    await this.writeSectionLookupCaches(
-      semester,
-      sectionCodes,
-      dbRowsBySectionCode,
-    );
+    // 2. Chỉ những mã cache miss mới truy vấn DB, rồi ghi lại cache.
+    if (missedCodes.length > 0) {
+      const rows = await this.prisma.classSection.findMany({
+        where: { sectionCode: { in: missedCodes }, semester },
+        orderBy: [
+          { sectionCode: 'asc' },
+          { dayOfWeek: 'asc' },
+          { startPeriod: 'asc' },
+          { createdAt: 'asc' },
+        ],
+        include: { course: true },
+      });
+
+      const dbRowsBySectionCode = new Map<string, ResolvedSectionRow[]>();
+      for (const row of rows) {
+        const group = dbRowsBySectionCode.get(row.sectionCode) ?? [];
+        group.push(row);
+        dbRowsBySectionCode.set(row.sectionCode, group);
+      }
+
+      for (const sectionCode of missedCodes) {
+        const group = dbRowsBySectionCode.get(sectionCode) ?? [];
+        if (group.length > 0) {
+          bySectionCode.set(sectionCode, group);
+        }
+      }
+
+      // Ghi cache cho phần vừa nạp từ DB (reg:section:code + khởi tạo
+      // reg:section:slots). Phần cache-hit ở trên KHÔNG ghi lại để tránh
+      // ghi đè counter số chỗ đang sống (đang được DECRBY/INCRBY).
+      await this.writeSectionLookupCaches(
+        semester,
+        missedCodes,
+        dbRowsBySectionCode,
+      );
+    }
 
     return bySectionCode;
   }
