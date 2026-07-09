@@ -275,6 +275,7 @@ export class RegistrationsService {
         timeOfDay: item.classSection!.timeOfDay as string | null,
         startPeriod: item.classSection!.startPeriod,
         endPeriod: item.classSection!.endPeriod,
+        weekRange: item.classSection!.weekRange,
       }));
 
     // 9. Sinh viên đã đăng ký môn này trong kỳ chưa?
@@ -428,6 +429,7 @@ export class RegistrationsService {
         timeOfDay: row.timeOfDay,
         startPeriod: row.startPeriod,
         endPeriod: row.endPeriod,
+        weekRange: row.weekRange,
       })),
     };
     const publish = await this.publisher.publishToQueue(payload);

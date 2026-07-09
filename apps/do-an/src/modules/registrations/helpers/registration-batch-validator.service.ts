@@ -3,7 +3,7 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
-import { PrismaService } from '@app/shared';
+import { PrismaService, weekRangesOverlap } from '@app/shared';
 import { SettingsService } from '../../settings/settings.service';
 import {
   ClassSectionType,
@@ -141,7 +141,8 @@ export class RegistrationBatchValidatorService {
   /**
    * Kiểm tra trùng lịch giữa các buổi học trong batch.
    * Nhận vào allRows (toàn bộ row của tất cả mã lớp, bao gồm nhiều buổi/tuần).
-   * Hai buổi bị coi là trùng lịch nếu: cùng dayOfWeek, cùng timeOfDay, và tiết học overlap.
+   * Hai buổi bị coi là trùng lịch nếu: cùng dayOfWeek, cùng timeOfDay,
+   * tiết học overlap, và tuần học giao nhau.
    * Buổi cùng 1 mã lớp (sectionCode) không check vì chú́ng là lịch hợp lệ của cùng 1 lớp.
    */
   assertNoScheduleConflict(
@@ -152,6 +153,7 @@ export class RegistrationBatchValidatorService {
       timeOfDay: string | null;
       startPeriod: number | null;
       endPeriod: number | null;
+      weekRange?: string | null;
     }>,
   ): void {
     // Chỉ xét các row có đủ thông tin lịch
@@ -168,6 +170,7 @@ export class RegistrationBatchValidatorService {
       timeOfDay: string;
       startPeriod: number;
       endPeriod: number;
+      weekRange?: string | null;
     }>;
 
     // Nhóm theo (dayOfWeek, timeOfDay)
@@ -189,13 +192,15 @@ export class RegistrationBatchValidatorService {
           const b = group[j];
           if (a.sectionCode === b.sectionCode) continue;
 
-          // Kiểm tra overlap tiết: [a.start, a.end] giao [b.start, b.end]
-          const overlaps = a.startPeriod <= b.endPeriod && b.startPeriod <= a.endPeriod;
-          if (overlaps) {
+          const periodsOverlap =
+            a.startPeriod <= b.endPeriod && b.startPeriod <= a.endPeriod;
+          const weeksOverlap = weekRangesOverlap(a.weekRange, b.weekRange);
+          if (periodsOverlap && weeksOverlap) {
             throw new BadRequestException(
               `Trùng lịch giữa lớp ${a.sectionCode} (tiết ${a.startPeriod}–${a.endPeriod}) ` +
                 `và lớp ${b.sectionCode} (tiết ${b.startPeriod}–${b.endPeriod}) ` +
-                `vào Thứ ${a.dayOfWeek} buổi ${a.timeOfDay}.`,
+                `vào Thứ ${a.dayOfWeek} buổi ${a.timeOfDay} ` +
+                `(tuần ${a.weekRange ?? 'N/A'} và ${b.weekRange ?? 'N/A'}).`,
             );
           }
         }

@@ -6,6 +6,7 @@ export interface ScheduleInfo {
   timeOfDay: string | null;
   startPeriod: number | null;
   endPeriod: number | null;
+  weekRange: string | null;
 }
 
 // ─── Section info (dùng trong CreateBatchHandler) ─────────────────────────────

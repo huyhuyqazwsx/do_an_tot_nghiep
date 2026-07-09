@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@app/shared';
+import { PrismaService, weekRangesOverlap } from '@app/shared';
 import { Prisma, RegistrationBatchItemStatus } from '@prisma/client';
 import type { ScheduleInfo } from '../types/registration-worker.types';
 
@@ -82,6 +82,7 @@ export class RegistrationHelperService {
       (s) =>
         s.dayOfWeek === section.dayOfWeek &&
         s.timeOfDay === section.timeOfDay &&
+        weekRangesOverlap(s.weekRange, section.weekRange) &&
         s.startPeriod !== null &&
         s.endPeriod !== null &&
         s.startPeriod <= section.endPeriod! &&

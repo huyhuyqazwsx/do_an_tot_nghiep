@@ -16,18 +16,29 @@ const POLL_BATCH = (__ENV.POLL_BATCH || "true") !== "false";
 const CANCEL_AFTER_CREATE = (__ENV.CANCEL_AFTER_CREATE || "true") !== "false";
 const POLL_ATTEMPTS = Number(__ENV.POLL_ATTEMPTS || "20");
 const POLL_INTERVAL_SECONDS = Number(__ENV.POLL_INTERVAL_SECONDS || "3");
+const ENABLE_SLEEP = true;
+
+const RUN_EXACT_USERS = false;
+const TOTAL_USERS = STUDENT_END - STUDENT_START + 1;
 
 export const options = {
   scenarios: {
-    registration_batch: {
-      executor: "ramping-vus",
-      stages: [
-        { duration: "30s", target: 800 },
-        { duration: "1m", target: 800 },
-        { duration: "30s", target: 0 },
-      ],
-      gracefulRampDown: "10s",
-    },
+    registration_batch: RUN_EXACT_USERS
+      ? {
+        executor: "shared-iterations",
+        vus: Math.min(800, TOTAL_USERS),
+        iterations: TOTAL_USERS,
+        maxDuration: "10m",
+      }
+      : {
+        executor: "ramping-vus",
+        stages: [
+          { duration: "30s", target: 800 },
+          { duration: "1m", target: 800 },
+          { duration: "30s", target: 0 },
+        ],
+        gracefulRampDown: "10s",
+      },
   },
   thresholds: {
     http_req_failed: ["rate<0.05"],
@@ -115,7 +126,7 @@ export default function (data) {
 
   // 1. Load Initial Data (Giống hệt luồng FE: vừa vào trang Đăng ký là gọi 2 API này)
   loadInitialData(token);
-  sleep(1);
+  if (ENABLE_SLEEP) sleep(1);
 
   // 2. Chọn bộ section codes theo nhóm
   const groupIndex = Math.floor(iterationIndex / GROUP_SIZE);
@@ -125,7 +136,7 @@ export default function (data) {
   // 3. Tìm kiếm lớp (giống luồng thật: SV search mã lớp → xem kết quả → chọn)
   for (const code of sectionCodes) {
     searchClassSection(token, code);
-    sleep(1);
+    if (ENABLE_SLEEP) sleep(1);
   }
 
   // 4. Gửi đăng ký batch
@@ -156,14 +167,14 @@ export default function (data) {
     createBatch = pollBatch(token, batchId);
   }
 
-  sleep(1);
+  if (ENABLE_SLEEP) sleep(1);
 
   // 6. Hủy lớp vừa đăng ký (giả lập SV thay đổi lịch)
   if (CANCEL_AFTER_CREATE && createBatch) {
     const successfulCodes = successSectionCodes(createBatch);
     if (successfulCodes.length > 0) {
       cancelRegisteredSections(token, successfulCodes);
-      sleep(1);
+      if (ENABLE_SLEEP) sleep(1);
     }
   }
 }

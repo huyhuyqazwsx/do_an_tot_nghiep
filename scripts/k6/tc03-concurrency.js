@@ -49,7 +49,7 @@ const SEMESTER = __ENV.SEMESTER || "20242";
 const PASSWORD = __ENV.PASSWORD || "1";
 const SECTION_CODE = __ENV.SECTION_CODE || "157517"; // BẮT BUỘC: mã lớp test (sl_max nhỏ)
 const VUS = Number(__ENV.VUS || "50"); // số SV đua vào cùng lớp
-const STUDENT_START = Number(__ENV.STUDENT_START || "20225331");
+const STUDENT_START = Number(__ENV.STUDENT_START || "20225731");
 
 // Mỗi VU đăng nhập 1 MSSV khác nhau, gửi ĐÚNG 1 request đăng ký rồi dừng.
 // shared-iterations + iterations = VUS → tổng cộng đúng VUS lượt đăng ký,

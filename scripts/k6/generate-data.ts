@@ -126,9 +126,12 @@ async function main() {
   console.log(`Ghi thành công vào scripts/k6/section-codes.json`);
 
   // In sample batch
-  console.log(`\n--- Batch 0 ---`);
-  for (const set of [...finalSets].filter(s => batches[0]?.includes(s.btCode))) {
-    console.log(`  ${set.courseCode}: LT_BT=${set.btCode} (Sức chứa: ${set.sections[0].maxCapacity})`);
+  for (let b = 0; b < 10; b++) {
+    if (!batches[b]) break;
+    console.log(`\n--- Batch ${b} ---`);
+    for (const set of [...finalSets].filter(s => batches[b]?.includes(s.btCode))) {
+      console.log(`  ${set.courseCode}: LT_BT=${set.btCode} (Sức chứa: ${set.sections[0].maxCapacity})`);
+    }
   }
 }
 

@@ -135,6 +135,7 @@ export class CreateBatchHandler {
           timeOfDay: item.timeOfDay,
           startPeriod: item.startPeriod,
           endPeriod: item.endPeriod,
+          weekRange: item.weekRange,
           course: {
             code: item.courseCode,
             name: item.courseName,
@@ -151,6 +152,7 @@ export class CreateBatchHandler {
           timeOfDay: true,
           startPeriod: true,
           endPeriod: true,
+          weekRange: true,
           course: {
             select: { code: true, name: true, prerequisite: true },
           },

@@ -8,6 +8,7 @@ export * from './rabbitmq/types/rabbitmq-publish-options.type';
 export * from './rabbitmq/types/rabbitmq-publish-result.type';
 export * from './rabbitmq/types/registration-queue.types';
 export * from './registration-slot-window.util';
+export * from './schedule-week-range.util';
 export * from './auth/jwt-payload.type';
 export * from './auth/jwt-auth.guard';
 export * from './auth/current-user.decorator';

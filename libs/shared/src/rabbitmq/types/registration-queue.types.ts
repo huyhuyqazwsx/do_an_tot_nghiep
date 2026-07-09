@@ -29,6 +29,7 @@ export type CreateRegistrationBatchJobItem = {
   timeOfDay: string | null;
   startPeriod: number | null;
   endPeriod: number | null;
+  weekRange: string | null;
 };
 
 // ─── Job Payload ──────────────────────────────────────────────────────────────
