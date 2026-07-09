@@ -41,7 +41,7 @@ export const CourseRedisKey = {
 
 /**
  * Redis key cho batch processing metrics — thay thế bảng batch_processing_logs.
- * Mỗi batch Worker ghi 1 Hash, TTL ngắn (2 phút). Dashboard đọc bằng SCAN + aggregate in-memory.
+ * Mỗi batch Worker ghi 1 Hash, TTL 30 ngày để dashboard/export có đủ dữ liệu phân tích ngắn hạn.
  * Convention: batch:log:{semester}:{batchId}
  */
 export const BatchLogRedisKey = {
@@ -53,6 +53,6 @@ export const BatchLogRedisKey = {
   /** Glob pattern để SCAN tất cả log của 1 kỳ */
   pattern: (semester: string) => `batch:log:${semester}:*`,
 
-  /** TTL mỗi entry (giây) — đủ cho window 10 phút + buffer */
-  TTL_SECONDS: 600,
+  /** TTL mỗi entry (giây) — 30 ngày */
+  TTL_SECONDS: 30 * 24 * 60 * 60,
 } as const;

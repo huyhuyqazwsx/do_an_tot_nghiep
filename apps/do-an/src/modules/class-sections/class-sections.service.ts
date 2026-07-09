@@ -17,7 +17,7 @@ import {
 import type Redis from 'ioredis';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { ClassSectionCsvRow } from './types/class-section-csv-row.type';
 import { ClassSectionImportError } from './types/class-section-import-error.type';
 import { ImportedClassSectionRow } from './types/imported-class-section-row.type';
@@ -28,6 +28,9 @@ import { CreateClassSectionDto } from './dto/create-class-section.dto';
 import { UpdateClassSectionDto } from './dto/update-class-section.dto';
 
 const CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS = 30 * 60;
+const CLASS_SECTION_CACHE_LOCK_TTL_MS = 2_000;
+const CLASS_SECTION_CACHE_WAIT_MS = 2;
+const CLASS_SECTION_CACHE_MAX_WAIT_MS = 2_000;
 
 type ClassSectionLookupResponse = {
   items: Array<
@@ -253,36 +256,31 @@ export class ClassSectionsService {
       throw new BadRequestException('semester and sectionCode are required');
     }
 
-    const cached = await this.readSectionByCodeCache(
+    const key = RegistrationRedisKey.sectionByCode(
       normalizedSemester,
       normalizedSectionCode,
     );
-    if (cached) {
-      return this.withCurrentRegisteredCounts(cached);
-    }
 
-    const items = await this.prisma.classSection.findMany({
-      where: {
-        semester: normalizedSemester,
-        sectionCode: normalizedSectionCode,
-      },
-      orderBy: [
-        { dayOfWeek: 'asc' },
-        { startPeriod: 'asc' },
-        { createdAt: 'asc' },
-      ],
-      include: {
-        course: true,
-      },
+    const response = await this.readThroughSectionByCodeCache(key, async () => {
+      const items = await this.prisma.classSection.findMany({
+        where: {
+          semester: normalizedSemester,
+          sectionCode: normalizedSectionCode,
+        },
+        orderBy: [
+          { dayOfWeek: 'asc' },
+          { startPeriod: 'asc' },
+          { createdAt: 'asc' },
+        ],
+        include: {
+          course: true,
+        },
+      });
+
+      const res = this.toLookupResponse(items);
+      await this.writeSectionSlotsCache(items);
+      return res;
     });
-
-    const response = this.toLookupResponse(items);
-    await this.writeSectionSlotsCache(items);
-    await this.writeSectionByCodeCache(
-      normalizedSemester,
-      normalizedSectionCode,
-      response,
-    );
 
     return this.withCurrentRegisteredCounts(response);
   }
@@ -301,37 +299,91 @@ export class ClassSectionsService {
     };
   }
 
-  private async readSectionByCodeCache(
-    semester: string,
-    sectionCode: string,
-  ): Promise<ClassSectionLookupResponse | null> {
-    const key = RegistrationRedisKey.sectionByCode(semester, sectionCode);
-    const cached = await this.redis.get(key).catch((error) => {
-      this.logger.warn(
-        `[ClassSections] Redis lookup failed for ${key}: ${error.message}`,
-      );
-      return null;
-    });
-
-    if (!cached) return null;
-
+  private async readThroughSectionByCodeCache(
+    cacheKey: string,
+    loadFromDb: () => Promise<ClassSectionLookupResponse>,
+  ): Promise<ClassSectionLookupResponse> {
     try {
-      const parsed = JSON.parse(cached) as ClassSectionLookupResponse;
-      if (!Array.isArray(parsed.items) || !parsed.meta) {
-        await this.redis.del(key);
-        return null;
+      const cached = await this.redis.get(cacheKey);
+      if (cached !== null) {
+        try {
+          const parsed = JSON.parse(cached) as ClassSectionLookupResponse;
+          if (
+            Array.isArray(parsed.items) &&
+            parsed.meta &&
+            parsed.items.every((item) => this.hasRequiredCourseInfo(item))
+          ) {
+            return parsed;
+          }
+        } catch {}
+        await this.redis.del(cacheKey);
       }
 
-      if (!parsed.items.every((item) => this.hasRequiredCourseInfo(item))) {
-        await this.redis.del(key);
-        return null;
+      const lockKey = `${cacheKey}:lock`;
+      const lockToken = randomUUID();
+      const locked = await this.redis.set(
+        lockKey,
+        lockToken,
+        'PX',
+        CLASS_SECTION_CACHE_LOCK_TTL_MS,
+        'NX',
+      );
+
+      if (locked === 'OK') {
+        try {
+          const value = await loadFromDb();
+          await this.redis.set(
+            cacheKey,
+            JSON.stringify(value),
+            'EX',
+            CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS,
+          );
+          return value;
+        } finally {
+          await this.releaseSectionCacheLock(lockKey, lockToken);
+        }
       }
 
-      return parsed;
+      const waitUntil = Date.now() + CLASS_SECTION_CACHE_MAX_WAIT_MS;
+      while (Date.now() < waitUntil) {
+        await this.sleep(CLASS_SECTION_CACHE_WAIT_MS);
+        const value = await this.redis.get(cacheKey);
+        if (value !== null) {
+          try {
+            const parsed = JSON.parse(value) as ClassSectionLookupResponse;
+            if (
+              Array.isArray(parsed.items) &&
+              parsed.meta &&
+              parsed.items.every((item) => this.hasRequiredCourseInfo(item))
+            ) {
+              return parsed;
+            }
+          } catch {}
+        }
+      }
+
+      return loadFromDb();
     } catch {
-      await this.redis.del(key);
-      return null;
+      return loadFromDb();
     }
+  }
+
+  private async releaseSectionCacheLock(lockKey: string, lockToken: string) {
+    await this.redis.eval(
+      `
+      if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+      end
+      return 0
+      `,
+      1,
+      lockKey,
+      lockToken,
+    );
+  }
+
+  private sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private hasRequiredCourseInfo(
@@ -351,25 +403,6 @@ export class ClassSectionsService {
       typeof course.name === 'string' &&
       Object.prototype.hasOwnProperty.call(course, 'prerequisite')
     );
-  }
-
-  private async writeSectionByCodeCache(
-    semester: string,
-    sectionCode: string,
-    response: ClassSectionLookupResponse,
-  ) {
-    await this.redis
-      .set(
-        RegistrationRedisKey.sectionByCode(semester, sectionCode),
-        JSON.stringify(response),
-        'EX',
-        CLASS_SECTION_LOOKUP_CACHE_TTL_SECONDS,
-      )
-      .catch((error) => {
-        this.logger.warn(
-          `[ClassSections] Redis cache write failed for ${semester}/${sectionCode}: ${error.message}`,
-        );
-      });
   }
 
   private async writeSectionSlotsCache(

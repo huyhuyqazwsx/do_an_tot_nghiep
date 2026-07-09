@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService, REDIS_CLIENT, BatchLogRedisKey } from '@app/shared';
 import {
   RegistrationBatchItemStatus,
@@ -7,6 +12,40 @@ import {
 } from '@prisma/client';
 import Redis from 'ioredis';
 import { RPS_KEY_PREFIX, RPS_WINDOW_SECONDS } from '../../common/middlewares/api-logger.middleware';
+
+type BatchLogEntry = {
+  key: string;
+  batchId: string;
+  batchType: string;
+  createdAtMs: number;
+  createdAtIso: string;
+  queueWaitMs: number;
+  processingDurationMs: number;
+  totalResponseMs: number;
+  totalItems: number;
+  successItems: number;
+  failedItems: number;
+};
+
+type BatchLogSummary = {
+  totalItems: number;
+  successItems: number;
+  failedItems: number;
+  batchCount: number;
+  successRatePercent: number | null;
+  avgProcessingDurationMs: number | null;
+  avgQueueWaitMs: number | null;
+  avgTotalResponseMs: number | null;
+  minProcessingDurationMs: number | null;
+  maxProcessingDurationMs: number | null;
+  minQueueWaitMs: number | null;
+  maxQueueWaitMs: number | null;
+  minTotalResponseMs: number | null;
+  maxTotalResponseMs: number | null;
+  minItems: number | null;
+  maxItems: number | null;
+  avgItemsPerBatch: number | null;
+};
 
 @Injectable()
 export class DashboardService {
@@ -152,6 +191,10 @@ export class DashboardService {
         if (row.type === RegistrationBatchType.CANCEL) failedItemsCancel += count;
       }
     }
+
+    // Mỗi cancel thành công tương ứng 1 CREATE item bị đổi từ SUCCESS → CANCELLED.
+    // Cộng lại để phản ánh đúng tổng items từng đăng ký thành công.
+    successItemsCreate += successItemsCancel;
 
     let totalBatchesCreate = 0;
     let totalBatchesCancel = 0;
@@ -340,6 +383,323 @@ export class DashboardService {
         redis: redisHealth,
       },
     };
+  }
+
+  async exportMetricsCsv(
+    semester: string,
+    from: string,
+    to: string,
+  ): Promise<{ filename: string; content: string }> {
+    const normalizedSemester = semester?.trim();
+    if (!normalizedSemester) {
+      throw new BadRequestException('semester is required');
+    }
+
+    const fromDate = this.parseExportDate(from, 'from');
+    const toDate = this.parseExportDate(to, 'to');
+    if (fromDate.getTime() > toDate.getTime()) {
+      throw new BadRequestException('from must be before or equal to to');
+    }
+
+    const entries = await this.getBatchLogEntriesByRange(
+      normalizedSemester,
+      fromDate.getTime(),
+      toDate.getTime(),
+    );
+    const summary = this.aggregateBatchLogEntries(entries);
+
+    return {
+      filename: this.buildMetricsExportFilename(
+        normalizedSemester,
+        fromDate,
+        toDate,
+      ),
+      content: this.buildMetricsExportCsv(
+        normalizedSemester,
+        fromDate,
+        toDate,
+        summary,
+        entries,
+      ),
+    };
+  }
+
+  private parseExportDate(value: string | undefined, fieldName: string): Date {
+    if (!value?.trim()) {
+      throw new BadRequestException(`${fieldName} is required`);
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(`${fieldName} must be a valid date`);
+    }
+
+    return date;
+  }
+
+  private async getBatchLogEntriesByRange(
+    semester: string,
+    fromMs: number,
+    toMs: number,
+  ): Promise<BatchLogEntry[]> {
+    const pattern = BatchLogRedisKey.pattern(semester);
+    const entries: BatchLogEntry[] = [];
+    let cursor = '0';
+
+    do {
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        500,
+      );
+      cursor = nextCursor;
+
+      if (keys.length === 0) {
+        continue;
+      }
+
+      const pipeline = this.redis.pipeline();
+      for (const key of keys) {
+        pipeline.hgetall(key);
+      }
+
+      const results = await pipeline.exec();
+      if (!results) {
+        continue;
+      }
+
+      for (let i = 0; i < results.length; i++) {
+        const [error, data] = results[i];
+        if (error || !data || typeof data !== 'object') {
+          continue;
+        }
+
+        const entry = this.toBatchLogEntry(
+          keys[i],
+          data as Record<string, string>,
+        );
+        if (
+          entry &&
+          entry.createdAtMs >= fromMs &&
+          entry.createdAtMs <= toMs
+        ) {
+          entries.push(entry);
+        }
+      }
+    } while (cursor !== '0');
+
+    return entries.sort((a, b) => a.createdAtMs - b.createdAtMs);
+  }
+
+  private toBatchLogEntry(
+    key: string,
+    data: Record<string, string>,
+  ): BatchLogEntry | null {
+    const createdAtMs = this.toFiniteNumber(data.createdAtMs);
+    if (!createdAtMs) {
+      return null;
+    }
+
+    const queueWaitMs = this.toFiniteNumber(data.queueWaitMs);
+    const processingDurationMs = this.toFiniteNumber(
+      data.processingDurationMs,
+    );
+    const totalItems = this.toFiniteNumber(data.totalItems);
+    const successItems = this.toFiniteNumber(data.successItems);
+    const failedItems = this.toFiniteNumber(data.failedItems);
+
+    return {
+      key,
+      batchId: key.split(':').at(-1) ?? key,
+      batchType: data.batchType ?? '',
+      createdAtMs,
+      createdAtIso: new Date(createdAtMs).toISOString(),
+      queueWaitMs,
+      processingDurationMs,
+      totalResponseMs: queueWaitMs + processingDurationMs,
+      totalItems,
+      successItems,
+      failedItems,
+    };
+  }
+
+  private toFiniteNumber(value: string | undefined): number {
+    const numberValue = Number(value ?? 0);
+    return Number.isFinite(numberValue) ? numberValue : 0;
+  }
+
+  private aggregateBatchLogEntries(entries: BatchLogEntry[]): BatchLogSummary {
+    let totalItems = 0;
+    let successItems = 0;
+    let failedItems = 0;
+    let sumDuration = 0;
+    let sumQueue = 0;
+    let sumTotal = 0;
+
+    let minDuration = Infinity;
+    let maxDuration = -Infinity;
+    let minQueue = Infinity;
+    let maxQueue = -Infinity;
+    let minTotal = Infinity;
+    let maxTotal = -Infinity;
+    let minItems = Infinity;
+    let maxItems = -Infinity;
+
+    for (const entry of entries) {
+      totalItems += entry.totalItems;
+      successItems += entry.successItems;
+      failedItems += entry.failedItems;
+      sumDuration += entry.processingDurationMs;
+      sumQueue += entry.queueWaitMs;
+      sumTotal += entry.totalResponseMs;
+
+      if (entry.processingDurationMs < minDuration) {
+        minDuration = entry.processingDurationMs;
+      }
+      if (entry.processingDurationMs > maxDuration) {
+        maxDuration = entry.processingDurationMs;
+      }
+      if (entry.queueWaitMs < minQueue) {
+        minQueue = entry.queueWaitMs;
+      }
+      if (entry.queueWaitMs > maxQueue) {
+        maxQueue = entry.queueWaitMs;
+      }
+      if (entry.totalResponseMs < minTotal) {
+        minTotal = entry.totalResponseMs;
+      }
+      if (entry.totalResponseMs > maxTotal) {
+        maxTotal = entry.totalResponseMs;
+      }
+      if (entry.totalItems < minItems) {
+        minItems = entry.totalItems;
+      }
+      if (entry.totalItems > maxItems) {
+        maxItems = entry.totalItems;
+      }
+    }
+
+    const count = entries.length;
+
+    return {
+      totalItems,
+      successItems,
+      failedItems,
+      batchCount: count,
+      successRatePercent: totalItems > 0
+        ? this.round((successItems / totalItems) * 100, 2)
+        : null,
+      avgProcessingDurationMs: count > 0
+        ? this.round(sumDuration / count, 2)
+        : null,
+      avgQueueWaitMs: count > 0 ? this.round(sumQueue / count, 2) : null,
+      avgTotalResponseMs: count > 0 ? this.round(sumTotal / count, 2) : null,
+      minProcessingDurationMs: count > 0 ? minDuration : null,
+      maxProcessingDurationMs: count > 0 ? maxDuration : null,
+      minQueueWaitMs: count > 0 ? minQueue : null,
+      maxQueueWaitMs: count > 0 ? maxQueue : null,
+      minTotalResponseMs: count > 0 ? minTotal : null,
+      maxTotalResponseMs: count > 0 ? maxTotal : null,
+      minItems: count > 0 ? minItems : null,
+      maxItems: count > 0 ? maxItems : null,
+      avgItemsPerBatch: count > 0 ? this.round(totalItems / count, 2) : null,
+    };
+  }
+
+  private buildMetricsExportCsv(
+    semester: string,
+    fromDate: Date,
+    toDate: Date,
+    summary: BatchLogSummary,
+    entries: BatchLogEntry[],
+  ): string {
+    const rows: Array<Array<string | number | null>> = [
+      ['dashboard_metrics_export'],
+      ['semester', semester],
+      ['from', fromDate.toISOString()],
+      ['to', toDate.toISOString()],
+      ['generatedAt', new Date().toISOString()],
+      [],
+      ['summary'],
+      ['metric', 'value'],
+      ['batchCount', summary.batchCount],
+      ['totalItems', summary.totalItems],
+      ['successItems', summary.successItems],
+      ['failedItems', summary.failedItems],
+      ['successRatePercent', summary.successRatePercent],
+      ['avgProcessingDurationMs', summary.avgProcessingDurationMs],
+      ['minProcessingDurationMs', summary.minProcessingDurationMs],
+      ['maxProcessingDurationMs', summary.maxProcessingDurationMs],
+      ['avgQueueWaitMs', summary.avgQueueWaitMs],
+      ['minQueueWaitMs', summary.minQueueWaitMs],
+      ['maxQueueWaitMs', summary.maxQueueWaitMs],
+      ['avgTotalResponseMs', summary.avgTotalResponseMs],
+      ['minTotalResponseMs', summary.minTotalResponseMs],
+      ['maxTotalResponseMs', summary.maxTotalResponseMs],
+      ['avgItemsPerBatch', summary.avgItemsPerBatch],
+      ['minItems', summary.minItems],
+      ['maxItems', summary.maxItems],
+      [],
+      ['batch_logs'],
+      [
+        'createdAt',
+        'batchId',
+        'batchType',
+        'totalItems',
+        'successItems',
+        'failedItems',
+        'queueWaitMs',
+        'processingDurationMs',
+        'totalResponseMs',
+        'redisKey',
+      ],
+    ];
+
+    for (const entry of entries) {
+      rows.push([
+        entry.createdAtIso,
+        entry.batchId,
+        entry.batchType,
+        entry.totalItems,
+        entry.successItems,
+        entry.failedItems,
+        entry.queueWaitMs,
+        entry.processingDurationMs,
+        entry.totalResponseMs,
+        entry.key,
+      ]);
+    }
+
+    return `\ufeff${rows
+      .map((row) => row.map((cell) => this.escapeCsvCell(cell)).join(','))
+      .join('\n')}\n`;
+  }
+
+  private escapeCsvCell(value: string | number | null): string {
+    const rawValue = value === null ? '' : String(value);
+    const escaped = rawValue.replace(/"/g, '""');
+    return /[",\n\r]/.test(escaped) ? `"${escaped}"` : escaped;
+  }
+
+  private buildMetricsExportFilename(
+    semester: string,
+    fromDate: Date,
+    toDate: Date,
+  ): string {
+    const safeSemester = semester.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return `dashboard-metrics-${safeSemester}-${this.formatDateForFilename(
+      fromDate,
+    )}-${this.formatDateForFilename(toDate)}.csv`;
+  }
+
+  private formatDateForFilename(date: Date): string {
+    return date.toISOString().replace(/[:.]/g, '-');
+  }
+
+  private round(value: number, digits: number): number {
+    return Number(value.toFixed(digits));
   }
 
   private async checkRedisHealth(): Promise<{

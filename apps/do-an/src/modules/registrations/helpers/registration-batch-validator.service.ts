@@ -70,9 +70,11 @@ export class RegistrationBatchValidatorService {
     sections: Array<{
       id: string;
       courseId: string;
+      courseCode?: string;
       sectionType: string | null;
       requiresLab: boolean;
       sectionCode: string;
+      linkedSectionCode: string | null;
     }>,
   ): void {
     const byCourse = new Map<string, typeof sections>();
@@ -83,22 +85,42 @@ export class RegistrationBatchValidatorService {
     }
 
     for (const [, group] of byCourse) {
-      // Lớp thực hành / thí nghiệm
       const labSections = group.filter(
         (s) =>
           s.sectionType === ClassSectionType.TN ||
           s.sectionType === ClassSectionType.TH,
       );
-      // Lớp lý thuyết đi kèm: nhận diện theo LOẠI lớp (LT / LT_BT / BT), không
-      // dựa vào can_tn vì cờ này không nhất quán giữa các môn trong dữ liệu.
       const theorySections = group.filter(
         (s) =>
           s.sectionType === ClassSectionType.LT ||
           s.sectionType === ClassSectionType.LT_BT ||
           s.sectionType === ClassSectionType.BT,
       );
-      // Lớp LT được đánh dấu bắt buộc kèm TN/TH (can_tn = true)
       const mainSectionsRequiringLab = group.filter((s) => s.requiresLab);
+
+      if (labSections.length > 1) {
+        throw new BadRequestException(
+          `Chỉ được phép đăng ký tối đa 1 lớp thực hành/thí nghiệm cho môn học. Đã phát hiện ${labSections.length} lớp cho môn ${group[0].courseCode ?? ''}: ${labSections.map((s) => s.sectionCode).join(', ')}`,
+        );
+      }
+
+      if (theorySections.length > 1) {
+        if (theorySections.length === 2) {
+          const [a, b] = theorySections;
+          const isLinked =
+            a.linkedSectionCode === b.sectionCode ||
+            b.linkedSectionCode === a.sectionCode;
+          if (!isLinked) {
+            throw new BadRequestException(
+              `Phát hiện trùng lặp nhiều lớp lý thuyết/bài tập độc lập của môn ${group[0].courseCode ?? ''}: ${theorySections.map((s) => s.sectionCode).join(', ')}. Trừ khi chúng là cặp lớp học đi liền với nhau, bạn chỉ được phép chọn 1 lớp đại diện.`,
+            );
+          }
+        } else {
+          throw new BadRequestException(
+            `Phát hiện đăng ký quá nhiều lớp lý thuyết/bài tập cho môn ${group[0].courseCode ?? ''}: ${theorySections.map((s) => s.sectionCode).join(', ')}. Bạn chỉ được phép chọn 1 lớp (hoặc 1 cặp lớp đi liền nhau).`,
+          );
+        }
+      }
 
       // Chiều 1: có lớp LT yêu cầu kèm TN/TH nhưng batch thiếu lớp thực hành
       if (mainSectionsRequiringLab.length > 0 && labSections.length === 0) {
@@ -108,7 +130,6 @@ export class RegistrationBatchValidatorService {
       }
 
       // Chiều 2: có lớp TN/TH nhưng thiếu lớp lý thuyết tương ứng
-      // (kể cả khi sinh viên chỉ đăng ký mỗi lớp thí nghiệm — group chỉ có 1 phần tử)
       if (labSections.length > 0 && theorySections.length === 0) {
         throw new BadRequestException(
           `Lớp TN/TH ${labSections[0].sectionCode} không có lớp lý thuyết tương ứng trong batch.`,

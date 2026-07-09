@@ -54,7 +54,7 @@ export class RegistrationsService {
     private readonly batchValidator: RegistrationBatchValidatorService,
     private readonly settingsService: SettingsService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+  ) { }
 
   private async resolveSectionCodes(
     sectionCodes: string[],
@@ -296,9 +296,11 @@ export class RegistrationsService {
       .map((item) => ({
         id: item.classSectionId!,
         courseId: item.classSection!.courseId,
+        courseCode: item.classSection!.course.code,
         sectionType: item.classSection!.sectionType as string | null,
         requiresLab: item.classSection!.requiresLab,
         sectionCode: item.classSection!.sectionCode,
+        linkedSectionCode: item.classSection!.linkedSectionCode,
       }));
     this.batchValidator.assertLabPairing([
       ...representativeSections,
