@@ -10,7 +10,7 @@ type SlotMutationResult = {
 
 @Injectable()
 export class RegistrationHelperService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // ─── Slot ─────────────────────────────────────────────────────────────────
 

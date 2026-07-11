@@ -16,7 +16,7 @@ const POLL_BATCH = (__ENV.POLL_BATCH || "true") !== "false";
 const CANCEL_AFTER_CREATE = (__ENV.CANCEL_AFTER_CREATE || "true") !== "false";
 const POLL_ATTEMPTS = Number(__ENV.POLL_ATTEMPTS || "20");
 const POLL_INTERVAL_SECONDS = Number(__ENV.POLL_INTERVAL_SECONDS || "3");
-const ENABLE_SLEEP = true;
+const ENABLE_SLEEP = false;
 
 const RUN_EXACT_USERS = false;
 const TOTAL_USERS = STUDENT_END - STUDENT_START + 1;
