@@ -299,10 +299,32 @@ Tìm các RegistrationBatch có:
 Gửi Email tổng hợp kết quả các items trong Batch.
 Cập nhật notification_status = SENT (hoặc FAILED nếu gửi lỗi).
 ```
+```
 
 ---
 
-## 5. Cấu trúc project (NestJS Monorepo)
+## 5. Cơ chế chịu lỗi (Fault Tolerance) & Toàn vẹn dữ liệu
+
+Hệ thống được thiết kế để tự phục hồi và bảo toàn dữ liệu ngay cả khi hạ tầng (Redis, RabbitMQ) gặp sự cố tắt đột ngột (Crash/Restart).
+
+### 5.1 Persistence cho Middleware (Docker Compose)
+* **Redis (Append Only File - AOF):** Cấu hình `redis-server --appendonly yes` đảm bảo mọi lệnh Ghi đều được append xuống ổ cứng. Khi container restart, Redis sẽ đọc lại file AOF để khôi phục dữ liệu đăng ký (slots/metrics).
+* **RabbitMQ (Durable & Persistent):** Các Queue đăng ký (`registration_create_batch`, `registration_cancel_batch`) đều được cấu hình `durable: true`, và message gửi đi có thuộc tính `persistent`. Khi thỏ (RabbitMQ) bị chết, message đang xếp hàng chưa kịp xử lý vẫn nằm an toàn trên ổ cứng và tự phục hồi khi hệ thống lên lại.
+
+### 5.2 Auto-Healing Cache (Phục hồi Redis tự động)
+Trong Service `PrewarmService` (chạy trên Scheduler app), hàm `healIfNeeded()` hoạt động định kỳ mỗi phút:
+* Kiểm tra hệ thống có đang trong thời gian mở đăng ký hay không (đọc từ Postgres `system_settings`).
+* Dùng lệnh `EXISTS reg:section:slots:{id}` để kiểm tra thử một lớp học phần bất kỳ.
+* **Nếu Miss (Redis mất dữ liệu do sự cố hoặc hết TTL):** Hệ thống sẽ cảnh báo `[Prewarm] Redis MISS ... auto-healing...` và lập tức nạp lại toàn bộ dữ liệu cấu hình, số lượng slot và chi tiết môn học từ DB lên Redis. Điều này đảm bảo Redis luôn ở trạng thái sẵn sàng phục vụ Luồng Đọc.
+
+### 5.3 Cơ chế Reconcile (Sửa lỗi sai lệch Slot)
+Bên cạnh Auto-Healing, `PrewarmService` còn có hàm `reconcileCurrentSemesterSlots()` chạy ngầm (Cronjob):
+* **Hoạt động:** Đọc danh sách toàn bộ các lớp của học kỳ hiện tại từ DB (PostgreSQL) và dùng lệnh `MGET` để quét một lượt toàn bộ số lượng slot đang lưu trên Redis.
+* **Xử lý:** Nó so sánh logic `sl_max - sl_dk` (từ DB) với dữ liệu đếm trên Redis. Nếu phát hiện lệch số do thao tác `DECR` bị hụt mạng hoặc rớt gói tin, nó sẽ mở `Pipeline` ghi đè (fix) lại giá trị đúng đắn lên Redis một cách đồng loạt.
+
+---
+
+## 6. Cấu trúc project (NestJS Monorepo)
 
 ```text
 apps/
@@ -336,7 +358,7 @@ libs/
 
 ---
 
-## 6. Khởi động hệ thống
+## 7. Khởi động hệ thống
 
 ```bash
 # Hạ tầng
