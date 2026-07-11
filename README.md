@@ -1,98 +1,182 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Hệ thống Đăng ký Tín chỉ — Backend (Đồ án tốt nghiệp)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend cho hệ thống đăng ký tín chỉ sinh viên, giải quyết bài toán **đăng ký học phần với độ tranh chấp cao** (hàng nghìn sinh viên cùng giành số lượng chỗ giới hạn của mỗi lớp học phần tại thời điểm mở đăng ký). Hệ thống thiết kế theo mô hình **queue-based load leveling**: API tiếp nhận yêu cầu và trả về ngay, việc trừ chỗ được xử lý bất đồng bộ qua RabbitMQ với câu lệnh SQL nguyên tử trên PostgreSQL, Redis đóng vai trò cache đọc nhanh (fast-fail).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+> Frontend là repository riêng: `do_an_fe` (React + Vite). Đặc tả API cho frontend xem tại [docs/fe-api-spec.md](docs/fe-api-spec.md).
 
-## Description
+## 1. Công nghệ và thư viện sử dụng
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Thành phần | Công nghệ | Phiên bản |
+|---|---|---|
+| Runtime | Node.js | >= 20 (khuyến nghị 22.x) |
+| Framework | NestJS (monorepo) | 11.x |
+| Ngôn ngữ | TypeScript | 5.7 |
+| CSDL | PostgreSQL | >= 14 |
+| ORM | Prisma | 5.22 |
+| Cache | Redis (ioredis) | Redis 7 / ioredis 5.10 |
+| Message queue | RabbitMQ (amqplib + amqp-connection-manager) | RabbitMQ 3.x |
+| Xác thực | JWT (@nestjs/jwt, passport-jwt) | 11.x / 4.x |
+| Gửi mail | nodemailer (Gmail SMTP) | 8.x |
+| Tài liệu API | Swagger (@nestjs/swagger) | 11.x |
+| Cron job | @nestjs/schedule | 6.x |
+| Quản lý tiến trình | PM2 | (cài global) |
+| Kiểm thử tải | k6 | (scripts/k6) |
+| Unit test | Jest | 30.x |
 
-## Project setup
+Danh sách đầy đủ và phiên bản chính xác xem trong [package.json](package.json).
 
-```bash
-$ npm install
-```
+## 2. Cấu trúc dự án
 
-## Compile and run the project
+NestJS monorepo gồm **3 ứng dụng + 1 thư viện dùng chung**:
 
-```bash
-# development
-$ npm run start
+| Project | Đường dẫn | Vai trò |
+|---|---|---|
+| `do-an` | `apps/do-an` | REST API (ứng dụng duy nhất mở cổng HTTP — mặc định 3000). Swagger tại `/api/docs` |
+| `worker` | `apps/worker` | Consumer RabbitMQ — xử lý bất đồng bộ các batch đăng ký/hủy đăng ký, trừ/hoàn chỗ nguyên tử trong PostgreSQL |
+| `scheduler` | `apps/scheduler` | Cron job: prewarm cache Redis, đối soát (reconcile) số chỗ giữa Redis và PostgreSQL, gửi email thông báo |
+| `shared` | `libs/shared` | Hạ tầng dùng chung (Prisma, Redis, RabbitMQ, JWT guard/decorator) — import qua alias `@app/shared` |
 
-# watch mode
-$ npm run start:dev
+Các module API chính (`apps/do-an/src/modules`): `auth`, `users`, `courses`, `class-sections`, `registrations`, `registration-slots`, `grades`, `settings`, `dashboard`.
 
-# production mode
-$ npm run start:prod
-```
+Tài liệu thiết kế chi tiết (tiếng Việt):
+- [docs/doc/thiet-ke-he-thong.md](docs/doc/thiet-ke-he-thong.md) — thiết kế hệ thống, luồng xử lý, khả năng chịu lỗi
+- [docs/doc/database-design.md](docs/doc/database-design.md) — thiết kế CSDL (8 bảng)
+- [docs/doc/sequence-diagrams.md](docs/doc/sequence-diagrams.md) — sequence diagram toàn bộ nghiệp vụ
+- [docs/fe-api-spec.md](docs/fe-api-spec.md) — đặc tả API cho frontend
 
-## Run tests
+## 3. Yêu cầu môi trường
 
-```bash
-# unit tests
-$ npm run test
+- Node.js >= 20 và npm
+- Docker + Docker Compose (để chạy Redis và RabbitMQ)
+- PostgreSQL >= 14 (chạy ngoài docker-compose, cấu hình qua `DATABASE_URL`)
+- (Tùy chọn) PM2 cài global nếu chạy chế độ production: `npm install -g pm2`
+- (Tùy chọn) k6 nếu chạy kiểm thử tải
 
-# e2e tests
-$ npm run test:e2e
+## 4. Cài đặt và chạy hệ thống
 
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Bước 1 — Cài dependency
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Bước 2 — Khởi động hạ tầng (Redis + RabbitMQ)
 
-## Resources
+```bash
+docker compose up -d
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Lệnh trên khởi động:
+- **Redis 7** tại `localhost:6379` (bật AOF persistence)
+- **RabbitMQ 3** tại `localhost:5672` (giao diện quản trị: `http://localhost:15672`, tài khoản `guest`/`guest`)
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+PostgreSQL cần được cài/chạy riêng. Tạo một database trống (ví dụ `do_an`).
 
-## Support
+### Bước 3 — Cấu hình biến môi trường
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Sao chép file mẫu và điền giá trị thực:
 
-## Stay in touch
+```bash
+cp .env.example .env
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Các biến quan trọng:
 
-## License
+| Biến | Ý nghĩa | Ví dụ |
+|---|---|---|
+| `DATABASE_URL` | Chuỗi kết nối PostgreSQL cho Prisma (bắt buộc) | `postgresql://postgres:postgres@localhost:5432/do_an?schema=public` |
+| `REDIS_HOST` / `REDIS_PORT` | Kết nối Redis | `localhost` / `6379` |
+| `RABBITMQ_URL` | URL kết nối RabbitMQ (mặc định `amqp://guest:guest@localhost:5672`) | |
+| `JWT_SECRET` / `JWT_EXPIRES_IN` | Khóa ký và thời hạn JWT | chuỗi ngẫu nhiên dài / `1d` |
+| `MAIL_USER` / `MAIL_APP_PASSWORD` | Gmail + App Password để gửi OTP và email thông báo (không bắt buộc để chạy các luồng khác) | |
+| `PORT` | Cổng HTTP của API (mặc định `3000`) | |
+| `ENABLE_DLQ_CONSUMER` | Bật consumer Dead-Letter Queue (chỉ đặt `true` cho 1 tiến trình worker riêng) | `false` |
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Bước 4 — Khởi tạo cơ sở dữ liệu
+
+Cách nhanh (đồng bộ schema trực tiếp, phù hợp môi trường chấm/demo):
+
+```bash
+npm run prisma:push        # prisma db push && prisma generate
+```
+
+Hoặc áp dụng đầy đủ lịch sử migration (khuyến nghị cho production):
+
+```bash
+npx prisma migrate deploy
+npx prisma generate
+```
+
+### Bước 5 — Chạy hệ thống (chế độ development)
+
+Chạy từng ứng dụng ở các terminal riêng:
+
+```bash
+npm run start:dev            # API           → http://localhost:3000
+npm run start:dev:worker     # Worker (consumer RabbitMQ)
+npm run start:dev:scheduler  # Scheduler (cron prewarm/reconcile)
+```
+
+Tối thiểu cần chạy **API + Worker** để luồng đăng ký hoạt động; **Scheduler** cần chạy để cache Redis được prewarm/đối soát.
+
+Sau khi API khởi động:
+- Swagger UI: `http://localhost:3000/api/docs`
+- Tài khoản admin mặc định được **tự động tạo** nếu chưa tồn tại (xem mục 6).
+
+### Chạy chế độ production (PM2)
+
+```bash
+npm run build                # build cả 3 app vào dist/
+npm run pm2:start            # theo ecosystem.config.js: 3 API (cluster) + 11 worker + 1 worker DLQ + 1 scheduler
+# hoặc gộp cả hai bước:
+npm run deploy
+# theo dõi:
+npm run pm2:logs
+npm run pm2:monit
+```
+
+## 5. Nạp dữ liệu thử nghiệm
+
+Đăng nhập bằng tài khoản **admin** rồi import dữ liệu qua API (hoặc qua giao diện admin của frontend):
+
+1. **Sinh viên**: `POST /api/users/import` với file [users_import.csv](users_import.csv) ở gốc repo (~2000 sinh viên test, mật khẩu đều là `1`).
+2. **Môn học**: `POST /api/courses/import` với file [docs/data-source/courses.csv](docs/data-source/courses.csv).
+3. **Lớp học phần**: `POST /api/class-sections/import` với file thời khóa biểu trong [docs/data-source/](docs/data-source/) (file `TKB2025...csv`).
+4. Vào `PATCH /api/settings` (hoặc trang Settings của admin) đặt **học kỳ hiện tại** và **khung thời gian mở đăng ký**; tạo đợt đăng ký theo dải MSSV tại `POST /api/registration-slots`.
+
+## 6. Tài khoản thử nghiệm
+
+| Vai trò | Mã đăng nhập | Mật khẩu | Ghi chú |
+|---|---|---|---|
+| Admin | `999999999` | `admin` | Tự động tạo khi API khởi động lần đầu (nếu chưa có) |
+| Sinh viên | `20225330` (hoặc bất kỳ MSSV nào trong `users_import.csv`) | `1` | Có sau khi import file `users_import.csv` |
+
+Đăng nhập: `POST /api/auth/login` với body `{ "studentCode": "...", "password": "..." }`.
+
+## 7. Kiểm thử
+
+```bash
+npm run test        # unit test (Jest)
+npm run test:e2e    # end-to-end test
+npm run test:cov    # coverage
+npm run lint        # eslint --fix
+```
+
+Kiểm thử tải (cần cài [k6](https://k6.io)):
+
+```bash
+# Mô phỏng nhiều sinh viên đồng thời gửi batch đăng ký
+k6 run scripts/k6/registration-batch.js
+# Kịch bản tranh chấp: N sinh viên giành 1 lớp ít chỗ
+k6 run -e PASSWORD=1 scripts/k6/tc03-concurrency.js
+```
+
+Chi tiết tham số từng kịch bản xem chú thích đầu mỗi file trong [scripts/k6/](scripts/k6/).
+
+## 8. Tóm tắt kiến trúc luồng đăng ký
+
+1. Sinh viên gửi `POST /api/registrations/batches` → API kiểm tra hợp lệ (khung giờ đăng ký, trần tín chỉ, trùng lịch, môn tiên quyết), ghi batch trạng thái `PENDING` vào PostgreSQL, đẩy message vào RabbitMQ và **trả về ngay** kèm `batchId`.
+2. **Worker** tiêu thụ message, trừ chỗ nguyên tử bằng một câu SQL duy nhất: `UPDATE class_sections SET sl_dk = sl_dk + 1 WHERE id = ? AND sl_dk < sl_max` — PostgreSQL bảo đảm không bao giờ vượt sĩ số dù hàng nghìn yêu cầu đồng thời.
+3. Xử lý lỗi: retry tối đa 6 lần, sau đó chuyển vào **Dead-Letter Queue** cho worker DLQ riêng xử lý.
+4. Frontend poll `GET /api/registrations/batches/:batchId` để hiển thị kết quả từng lớp.
+5. **Scheduler** prewarm số chỗ vào Redis mỗi phút và đối soát Redis ↔ PostgreSQL mỗi 10 phút; Redis chỉ là cache — PostgreSQL luôn là nguồn dữ liệu chuẩn.
